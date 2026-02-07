@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stellar Observatory | Professional Astronomy Platform</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.161/build/three.module.js",
+          "jsm/": "https://cdn.jsdelivr.net/npm/three@0.161/examples/jsm/"
+        }
+      }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Space+Mono:wght@400;700&display=swap');
+        
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #141414;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --accent: #ffffff;
+            --border: #1a1a1a;
+            --glow: rgba(255, 255, 255, 0.1);
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+        
+        /* Three.js Canvas */
+        #three-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -1; /* Changed to background */
+        }
+        
+        .page-transition {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        .page-transition.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .mono-font {
+            font-family: 'Space Mono', monospace;
+        }
+        
+        .bg-grid {
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        
+        .text-glow {
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 2px solid var(--border);
+            border-top-color: var(--text-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Earth background enhancement */
+        .earth-bg {
+            background-image: url('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+        
+        .earth-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.9) 70%);
+        }
+    </style>
+</head>
+<body class="bg-black text-white">
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="text-gray-400 uppercase tracking-widest text-sm">LOADING STELLAR OBSERVATORY...</div>
+    </div>
+
+    <!-- Three.js Canvas -->
+    <canvas id="three-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 py-6 px-8 lg:px-12 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent backdrop-blur-md border-b border-gray-800 z-50 transition-all duration-300">
+        <div class="mono-font font-bold text-xl tracking-widest cursor-pointer" onclick="navigateTo('home')">STELLAR OBSERVATORY</div>
+        
+        <div class="menu-toggle lg:hidden flex flex-col gap-1 cursor-pointer" onclick="toggleMenu()">
+            <span class="w-6 h-0.5 bg-white"></span>
+            <span class="w-6 h-0.5 bg-white"></span>
+            <span class="w-6 h-0.5 bg-white"></span>
+        </div>
+        
+        <ul class="nav-links hidden lg:flex gap-10 list-none">
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('home')">Home</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('about')">About</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('observatory')">Observatory</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('tracking')">Tracking</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('research')">Research</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('contact')">Contact</a></li>
+        </ul>
+        
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="lg:hidden absolute top-full left-0 right-0 bg-black/95 border-b border-gray-800 hidden flex-col p-6">
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('home')">Home</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('about')">About</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('observatory')">Observatory</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('tracking')">Tracking</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('research')">Research</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('contact')">Contact</a>
+        </div>
+    </nav>
+
+    <!-- Page Container -->
+    <div id="page-container" class="pt-20">
+        <!-- Home Page -->
+        <div id="home-page" class="page min-h-screen flex flex-col justify-center items-center text-center px-6 page-transition active earth-bg">
+            <div class="relative z-10 max-w-6xl mx-auto">
+                <h1 class="text-6xl md:text-8xl lg:text-9xl font-black leading-none mb-8 text-glow">OBSERVING<br><span class="text-gray-300">THE COSMOS</span></h1>
+                <p class="text-gray-400 text-lg md:text-xl uppercase tracking-widest mb-12">Advanced Astronomical Visualization</p>
+                <button class="bg-white text-black px-10 py-4 font-semibold uppercase tracking-widest text-sm hover:bg-transparent hover:text-white border border-white transition-all duration-300" onclick="navigateTo('about')">
+                    Explore Observatory
+                </button>
+            </div>
+            <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 text-gray-500 uppercase tracking-widest text-xs animate-bounce">
+                <i class="fas fa-chevron-down"></i>
+            </div>
+        </div>
+
+        <!-- About Page -->
+        <div id="about-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-10">About Stellar Observatory</h2>
+                <p class="text-gray-400 text-lg md:text-xl max-w-3xl mb-16 leading-relaxed">
+                    We are a cutting-edge astronomical research facility dedicated to monitoring near-Earth objects, 
+                    tracking celestial phenomena, and advancing our understanding of the cosmos through state-of-the-art 
+                    visualization and data analysis technologies.
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <div class="text-4xl mb-6"><i class="fas fa-satellite"></i></div>
+                        <h3 class="text-xl font-semibold mb-4">Advanced Tracking</h3>
+                        <p class="text-gray-400">Our sophisticated tracking systems monitor thousands of celestial objects in real-time, providing critical data for planetary defense and scientific research.</p>
+                    </div>
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <div class="text-4xl mb-6"><i class="fas fa-chart-line"></i></div>
+                        <h3 class="text-xl font-semibold mb-4">Data Analytics</h3>
+                        <p class="text-gray-400">Leveraging machine learning and big data analytics to process astronomical observations and predict orbital trajectories with unprecedented accuracy.</p>
+                    </div>
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <div class="text-4xl mb-6"><i class="fas fa-users"></i></div>
+                        <h3 class="text-xl font-semibold mb-4">Global Collaboration</h3>
+                        <p class="text-gray-400">Working with international space agencies and research institutions to share data and coordinate efforts in space observation and planetary defense.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observatory Page -->
+        <div id="observatory-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-10">Observatory Metrics</h2>
+                <p class="text-gray-400 text-lg max-w-2xl mb-16">
+                    Real-time data from our global network of telescopes and tracking stations.
+                </p>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-gray-800">
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Near-Earth Objects</div>
+                        <div class="mono-font text-5xl font-bold mb-2">247</div>
+                        <p class="text-gray-500 text-sm">Currently tracked celestial bodies</p>
+                    </div>
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Safety Index</div>
+                        <div class="mono-font text-5xl font-bold mb-2">98.7%</div>
+                        <p class="text-gray-500 text-sm">Planetary defense readiness</p>
+                    </div>
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Closest Approach</div>
+                        <div class="mono-font text-5xl font-bold mb-2">0.42 LD</div>
+                        <p class="text-gray-500 text-sm">Nearest object distance</p>
+                    </div>
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Risk Assessment</div>
+                        <div class="mono-font text-5xl font-bold mb-2">LOW</div>
+                        <p class="text-gray-500 text-sm">Current threat level</p>
+                    </div>
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Active Telescopes</div>
+                        <div class="mono-font text-5xl font-bold mb-2">42</div>
+                        <p class="text-gray-500 text-sm">Global observation network</p>
+                    </div>
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Data Points</div>
+                        <div class="mono-font text-5xl font-bold mb-2">2.4M</div>
+                        <p class="text-gray-500 text-sm">Collected this month</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tracking Page -->
+        <div id="tracking-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12">
+                    <div class="mb-8 lg:mb-0">
+                        <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">Live Tracking</h2>
+                        <p class="text-gray-400">Real-time monitoring of near-Earth objects</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <button class="filter-btn px-6 py-2 border border-gray-800 text-gray-400 text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 active" onclick="filterTracking('all')">All</button>
+                        <button class="filter-btn px-6 py-2 border border-gray-800 text-gray-400 text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300" onclick="filterTracking('hazardous')">Hazardous</button>
+                        <button class="filter-btn px-6 py-2 border border-gray-800 text-gray-400 text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300" onclick="filterTracking('close')">Close</button>
+                    </div>
+                </div>
+                
+                <div class="space-y-px bg-gray-800">
+                    <div class="feed-item bg-black p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center hover:bg-gray-900 transition-colors duration-300" data-type="close">
+                        <div class="mono-font text-gray-500">01</div>
+                        <div class="lg:col-span-2">
+                            <h3 class="text-xl font-semibold mb-2">2024 BX1</h3>
+                            <p class="text-gray-400">Small near-Earth asteroid approximately 50-110m in diameter with stable trajectory</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="mono-font text-2xl font-bold mb-1">0.42 LD</div>
+                            <div class="text-green-500 text-xs uppercase tracking-widest font-semibold">Safe</div>
+                        </div>
+                    </div>
+                    
+                    <div class="feed-item bg-black p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="mono-font text-gray-500">02</div>
+                        <div class="lg:col-span-2">
+                            <h3 class="text-xl font-semibold mb-2">C/2023 A3</h3>
+                            <p class="text-gray-400">Long-period comet with highly elliptical orbit approaching inner solar system</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="mono-font text-2xl font-bold mb-1">2.1 LD</div>
+                            <div class="text-green-500 text-xs uppercase tracking-widest font-semibold">Safe</div>
+                        </div>
+                    </div>
+                    
+                    <div class="feed-item bg-black p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center hover:bg-gray-900 transition-colors duration-300" data-type="hazardous close">
+                        <div class="mono-font text-gray-500">03</div>
+                        <div class="lg:col-span-2">
+                            <h3 class="text-xl font-semibold mb-2">2025 PK9</h3>
+                            <p class="text-gray-400">Potentially hazardous asteroid under enhanced monitoring and observation</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="mono-font text-2xl font-bold mb-1">0.89 LD</div>
+                            <div class="text-yellow-500 text-xs uppercase tracking-widest font-semibold">Monitoring</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Research Page -->
+        <div id="research-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-10">Current Research Projects</h2>
+                <p class="text-gray-400 text-lg max-w-2xl mb-16">
+                    Exploring the frontiers of astronomical science and planetary defense.
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <span class="inline-block bg-gray-800 px-4 py-1 text-xs uppercase tracking-widest mb-6">Planetary Defense</span>
+                        <h3 class="text-xl font-semibold mb-4">Asteroid Deflection Simulations</h3>
+                        <p class="text-gray-400 mb-6">Advanced computational modeling of kinetic impactor missions for potentially hazardous asteroids.</p>
+                        <a href="#" class="text-white text-sm uppercase tracking-widest font-semibold inline-flex items-center gap-2 hover:gap-4 transition-all duration-300">
+                            Read More <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <span class="inline-block bg-gray-800 px-4 py-1 text-xs uppercase tracking-widest mb-6">Deep Space</span>
+                        <h3 class="text-xl font-semibold mb-4">Exoplanet Atmosphere Analysis</h3>
+                        <p class="text-gray-400 mb-6">Utilizing spectroscopy to detect biosignatures in the atmospheres of distant exoplanets.</p>
+                        <a href="#" class="text-white text-sm uppercase tracking-widest font-semibold inline-flex items-center gap-2 hover:gap-4 transition-all duration-300">
+                            Read More <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <span class="inline-block bg-gray-800 px-4 py-1 text-xs uppercase tracking-widest mb-6">AI & Machine Learning</span>
+                        <h3 class="text-xl font-semibold mb-4">Automated Object Classification</h3>
+                        <p class="text-gray-400 mb-6">Developing neural networks to automatically classify and track celestial objects.</p>
+                        <a href="#" class="text-white text-sm uppercase tracking-widest font-semibold inline-flex items-center gap-2 hover:gap-4 transition-all duration-300">
+                            Read More <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Page -->
+        <div id="contact-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-5xl mx-auto">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-10">Get In Touch</h2>
+                <p class="text-gray-400 text-lg mb-16 max-w-2xl">
+                    Interested in collaboration, data access, or learning more about our research? 
+                    Contact our team today.
+                </p>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                    <div>
+                        <form id="contact-form" class="space-y-8">
+                            <div>
+                                <label class="block text-gray-400 text-xs uppercase tracking-widest mb-2" for="name">Name</label>
+                                <input type="text" id="name" name="name" required class="w-full bg-gray-900/50 border border-gray-800 px-6 py-4 text-white focus:outline-none focus:border-white transition-colors duration-300">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-400 text-xs uppercase tracking-widest mb-2" for="email">Email</label>
+                                <input type="email" id="email" name="email" required class="w-full bg-gray-900/50 border border-gray-800 px-6 py-4 text-white focus:outline-none focus:border-white transition-colors duration-300">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-400 text-xs uppercase tracking-widest mb-2" for="message">Message</label>
+                                <textarea id="message" name="message" required rows="6" class="w-full bg-gray-900/50 border border-gray-800 px-6 py-4 text-white focus:outline-none focus:border-white transition-colors duration-300"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="bg-white text-black px-10 py-4 font-semibold uppercase tracking-widest text-sm hover:bg-transparent hover:text-white border border-white transition-all duration-300">
+                                Send Message
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div class="space-y-10">
+                        <div class="text-center p-10 bg-gray-900/50 border border-gray-800">
+                            <div class="text-3xl mb-6"><i class="fas fa-envelope"></i></div>
+                            <h4 class="text-gray-400 text-xs uppercase tracking-widest mb-4">Email</h4>
+                            <p>contact@stellar-observatory.org</p>
+                        </div>
+                        
+                        <div class="text-center p-10 bg-gray-900/50 border border-gray-800">
+                            <div class="text-3xl mb-6"><i class="fas fa-phone"></i></div>
+                            <h4 class="text-gray-400 text-xs uppercase tracking-widest mb-4">Phone</h4>
+                            <p>+1 (555) 123-4567</p>
+                        </div>
+                        
+                        <div class="text-center p-10 bg-gray-900/50 border border-gray-800">
+                            <div class="text-3xl mb-6"><i class="fas fa-map-marker-alt"></i></div>
+                            <h4 class="text-gray-400 text-xs uppercase tracking-widest mb-4">Location</h4>
+                            <p>Observatory HQ, Arizona</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-12 px-6 text-center">
+        <p class="text-gray-500 text-sm uppercase tracking-widest">STELLAR OBSERVATORY © 2026 — PROFESSIONAL ASTRONOMICAL VISUALIZATION PLATFORM</p>
+    </footer>
+
+    <!-- Controls -->
+    <div class="fixed bottom-10 right-10 flex flex-col gap-4 z-40">
+        <button class="control-btn w-14 h-14 bg-gray-900/50 backdrop-blur-md border border-gray-800 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300" id="rotateBtn" title="Rotate">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+        <button class="control-btn w-14 h-14 bg-gray-900/50 backdrop-blur-md border border-gray-800 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300" id="resetBtn" title="Reset View">
+            <i class="fas fa-compress"></i>
+        </button>
+        <button class="control-btn w-14 h-14 bg-gray-900/50 backdrop-blur-md border border-gray-800 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300" id="orbitsBtn" title="Toggle View">
+            <i class="fas fa-globe"></i>
+        </button>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'jsm/controls/OrbitControls.js';
+
+        // Scene setup
+        let scene, camera, renderer, controls;
+        let earth, earthClouds, earthAtmosphere;
+        let planets = [];
+        let asteroids = [];
+        let sun;
+        let autoRotate = false;
+        let textureLoader;
+
+        // Initialize
+        init();
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.FogExp2(0x000000, 0.00015);
+
+            // Camera - Adjusted for larger Earth background
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 0, 40); // Closer to make Earth appear larger
+
+            // Renderer
+            const canvas = document.getElementById('three-canvas');
+            renderer = new THREE.WebGLRenderer({ 
+                canvas,
+                antialias: true,
+                alpha: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enableZoom = true;
+            controls.enablePan = false;
+            controls.minDistance = 20; // Closer minimum distance
+            controls.maxDistance = 150;
+            controls.autoRotate = autoRotate;
+            controls.autoRotateSpeed = 0.3;
+
+            // Texture Loader
+            textureLoader = new THREE.TextureLoader();
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+            sunLight.position.set(50, 0, 50);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            scene.add(sunLight);
+
+            const fillLight = new THREE.DirectionalLight(0x3a5f7d, 0.4);
+            fillLight.position.set(-50, 0, -50);
+            scene.add(fillLight);
+
+            // Create starfield
+            createStarfield();
+
+            // Create realistic Earth with NASA textures - made larger
+            createPhotoRealisticEarth();
+
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            document.getElementById('rotateBtn').addEventListener('click', toggleRotation);
+            document.getElementById('resetBtn').addEventListener('click', resetCamera);
+            document.getElementById('orbitsBtn').addEventListener('click', switchToSolarSystemView);
+
+            // Start animation
+            animate();
+        }
+
+        function createStarfield() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.7,
+                transparent: true,
+                opacity: 0.9
+            });
+
+            const starsVertices = [];
+            for (let i = 0; i < 8000; i++) {
+                const x = (Math.random() - 0.5) * 600;
+                const y = (Math.random() - 0.5) * 600;
+                const z = (Math.random() - 0.5) * 600;
+                starsVertices.push(x, y, z);
+            }
+
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const starField = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(starField);
+        }
+
+        function createPhotoRealisticEarth() {
+            // Increased Earth size for larger background
+            const earthGeometry = new THREE.SphereGeometry(20, 128, 128);
+
+            const earthTexture = textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg',
+                () => {
+                    setTimeout(() => {
+                        document.getElementById('loading').classList.add('hidden');
+                    }, 500);
+                }
+            );
+
+            const bumpTexture = textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_normal_2048.jpg'
+            );
+
+            const specularTexture = textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_specular_2048.jpg'
+            );
+
+            const earthMaterial = new THREE.MeshPhongMaterial({
+                map: earthTexture,
+                bumpMap: bumpTexture,
+                bumpScale: 0.5,
+                specularMap: specularTexture,
+                specular: new THREE.Color(0x555555),
+                shininess: 15,
+                color: new THREE.Color(0x7a9d88),
+                emissive: new THREE.Color(0x001a33),
+                emissiveIntensity: 0.2
+            });
+
+            earth = new THREE.Mesh(earthGeometry, earthMaterial);
+            earth.castShadow = true;
+            earth.receiveShadow = true;
+            scene.add(earth);
+
+            // Clouds - scaled to match larger Earth
+            const cloudsGeometry = new THREE.SphereGeometry(20.15, 128, 128);
+            const cloudsTexture = textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_clouds_1024.png'
+            );
+
+            const cloudsMaterial = new THREE.MeshPhongMaterial({
+                map: cloudsTexture,
+                transparent: true,
+                opacity: 0.3,
+                depthWrite: false
+            });
+
+            earthClouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
+            scene.add(earthClouds);
+
+            // Atmosphere - scaled to match larger Earth
+            const atmosphereGeometry = new THREE.SphereGeometry(21.2, 128, 128);
+            const atmosphereMaterial = new THREE.ShaderMaterial({
+                transparent: true,
+                side: THREE.BackSide,
+                uniforms: {
+                    c: { value: 0.3 },
+                    p: { value: 3.5 }
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float c;
+                    uniform float p;
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(c - dot(vNormal, vec3(0.0, 0.0, 1.0)), p);
+                        gl_FragColor = vec4(0.1, 0.3, 0.65, 1.0) * intensity;
+                    }
+                `
+            });
+
+            earthAtmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            scene.add(earthAtmosphere);
+
+            // Inner glow - scaled to match larger Earth
+            const innerGlowGeometry = new THREE.SphereGeometry(20.6, 128, 128);
+            const innerGlowMaterial = new THREE.ShaderMaterial({
+                transparent: true,
+                side: THREE.FrontSide,
+                uniforms: {
+                    c: { value: 0.2 },
+                    p: { value: 6.0 }
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float c;
+                    uniform float p;
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(c + dot(vNormal, vec3(0, 0, 1.0)), p);
+                        gl_FragColor = vec4(0.1, 0.3, 0.65, 0.1) * intensity;
+                    }
+                `
+            });
+
+            const innerGlow = new THREE.Mesh(innerGlowGeometry, innerGlowMaterial);
+            scene.add(innerGlow);
+        }
+
+        function switchToSolarSystemView() {
+            if (earth) {
+                scene.remove(earth);
+                scene.remove(earthClouds);
+                scene.remove(earthAtmosphere);
+                earth = null;
+            }
+
+            const objectsToRemove = [];
+            scene.traverse(obj => {
+                if (obj.isMesh && obj.material && obj.material.type === 'ShaderMaterial') {
+                    objectsToRemove.push(obj);
+                }
+            });
+            objectsToRemove.forEach(obj => scene.remove(obj));
+
+            createSun();
+            createPlanet(6, 0xc4c4c4, 15, 0.008, 'Mercury');
+            createPlanet(8, 0xe5e5e5, 22, 0.006, 'Venus');
+            createPlanet(8.5, 0xd4d4d4, 30, 0.005, 'Earth');
+            createPlanet(7, 0xcccccc, 40, 0.004, 'Mars');
+            createPlanet(15, 0xe8e8e8, 65, 0.002, 'Jupiter');
+            createPlanet(13, 0xf0f0f0, 85, 0.0015, 'Saturn');
+            createAsteroidBelt();
+
+            camera.position.set(0, 40, 70);
+            controls.autoRotate = true;
+        }
+
+        function createSun() {
+            const sunGeometry = new THREE.SphereGeometry(5, 64, 64);
+            const sunMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                emissive: 0xffffff,
+                emissiveIntensity: 1
+            });
+            sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            scene.add(sun);
+
+            for (let i = 1; i <= 3; i++) {
+                const glowSize = 5 + i * 1.5;
+                const glowOpacity = 0.15 / i;
+                const glowGeometry = new THREE.SphereGeometry(glowSize, 32, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: glowOpacity,
+                    side: THREE.BackSide
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                scene.add(glow);
+            }
+        }
+
+        function createPlanet(size, color, distance, speed, name) {
+            const geometry = new THREE.SphereGeometry(size / 10, 32, 32);
+            const material = new THREE.MeshStandardMaterial({
+                color: color,
+                metalness: 0.3,
+                roughness: 0.7,
+                emissive: color,
+                emissiveIntensity: 0.05
+            });
+            const planet = new THREE.Mesh(geometry, material);
+            planet.castShadow = true;
+            planet.receiveShadow = true;
+            planet.position.x = distance;
+
+            const orbit = new THREE.Group();
+            orbit.add(planet);
+
+            const orbitCurve = new THREE.EllipseCurve(0, 0, distance, distance, 0, 2 * Math.PI, false, 0);
+            const points = orbitCurve.getPoints(100);
+            const orbitGeometry = new THREE.BufferGeometry().setFromPoints(points);
+            const orbitMaterial = new THREE.LineBasicMaterial({
+                color: 0x333333,
+                transparent: true,
+                opacity: 0.3
+            });
+            const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+            orbitLine.rotation.x = Math.PI / 2;
+            orbit.add(orbitLine);
+
+            scene.add(orbit);
+            planets.push({ orbit, planet, distance, speed, name });
+        }
+
+        function createAsteroidBelt() {
+            const asteroidCount = 300;
+            const innerRadius = 48;
+            const outerRadius = 58;
+
+            for (let i = 0; i < asteroidCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
+                
+                const size = Math.random() * 0.15 + 0.05;
+                const geometry = new THREE.DodecahedronGeometry(size, 0);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x888888,
+                    metalness: 0.5,
+                    roughness: 0.8
+                });
+                
+                const asteroid = new THREE.Mesh(geometry, material);
+                asteroid.position.x = Math.cos(angle) * radius;
+                asteroid.position.z = Math.sin(angle) * radius;
+                asteroid.position.y = (Math.random() - 0.5) * 3;
+                
+                asteroid.rotation.x = Math.random() * Math.PI;
+                asteroid.rotation.y = Math.random() * Math.PI;
+                
+                scene.add(asteroid);
+                asteroids.push({
+                    mesh: asteroid,
+                    rotationSpeed: {
+                        x: (Math.random() - 0.5) * 0.02,
+                        y: (Math.random() - 0.5) * 0.02,
+                        z: (Math.random() - 0.5) * 0.02
+                    },
+                    orbitSpeed: 0.001 + Math.random() * 0.002,
+                    angle: angle,
+                    radius: radius
+                });
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (earth) {
+                earth.rotation.y += 0.001;
+                if (earthClouds) {
+                    earthClouds.rotation.y += 0.0012;
+                }
+            }
+
+            if (sun) {
+                sun.rotation.y += 0.001;
+            }
+
+            planets.forEach(p => {
+                p.orbit.rotation.y += p.speed;
+                p.planet.rotation.y += 0.01;
+            });
+
+            asteroids.forEach(a => {
+                a.mesh.rotation.x += a.rotationSpeed.x;
+                a.mesh.rotation.y += a.rotationSpeed.y;
+                a.mesh.rotation.z += a.rotationSpeed.z;
+                
+                a.angle += a.orbitSpeed;
+                a.mesh.position.x = Math.cos(a.angle) * a.radius;
+                a.mesh.position.z = Math.sin(a.angle) * a.radius;
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function toggleRotation() {
+            autoRotate = !autoRotate;
+            controls.autoRotate = autoRotate;
+            
+            // Update button appearance
+            const btn = document.getElementById('rotateBtn');
+            if (autoRotate) {
+                btn.classList.add('bg-white', 'text-black');
+                btn.classList.remove('bg-gray-900/50', 'text-white');
+            } else {
+                btn.classList.remove('bg-white', 'text-black');
+                btn.classList.add('bg-gray-900/50', 'text-white');
+            }
+        }
+
+        function resetCamera() {
+            if (earth && !sun) {
+                camera.position.set(0, 0, 40); // Reset to Earth view
+            } else {
+                camera.position.set(0, 40, 70); // Reset to solar system view
+            }
+            camera.lookAt(0, 0, 0);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        }
+
+        // Export functions for global use
+        window.toggleRotation = toggleRotation;
+        window.resetCamera = resetCamera;
+        window.switchToSolarSystemView = switchToSolarSystemView;
+    </script>
+
+    <script>
+        // Navigation state
+        let currentPage = 'home';
+        
+        // Navigation function
+        function navigateTo(page) {
+            // Hide current page
+            const currentPageElement = document.getElementById(`${currentPage}-page`);
+            if (currentPageElement) {
+                currentPageElement.classList.remove('active');
+                setTimeout(() => {
+                    currentPageElement.classList.add('hidden');
+                }, 300);
+            }
+            
+            // Update nav links
+            document.querySelectorAll('.nav-link, .nav-link-mobile').forEach(link => {
+                link.classList.remove('text-white', 'border-b-2', 'border-white');
+                link.classList.add('text-gray-400');
+            });
+            
+            // Show new page
+            const newPageElement = document.getElementById(`${page}-page`);
+            if (newPageElement) {
+                newPageElement.classList.remove('hidden');
+                setTimeout(() => {
+                    newPageElement.classList.add('active');
+                }, 50);
+                
+                // Update current page
+                currentPage = page;
+                
+                // Update active nav link
+                document.querySelectorAll('.nav-link, .nav-link-mobile').forEach(link => {
+                    if (link.textContent.trim().toLowerCase() === page) {
+                        link.classList.remove('text-gray-400');
+                        link.classList.add('text-white');
+                        if (page === 'home') {
+                            link.classList.add('border-b-2', 'border-white');
+                        }
+                    }
+                });
+                
+                // Close mobile menu if open
+                document.getElementById('mobileMenu').classList.add('hidden');
+            }
+        }
+        
+        // Mobile menu toggle
+        function toggleMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+        
+        // Filter tracking items
+        function filterTracking(type) {
+            const items = document.querySelectorAll('.feed-item');
+            const buttons = document.querySelectorAll('.filter-btn');
+            
+            buttons.forEach(btn => btn.classList.remove('active', 'bg-white', 'text-black'));
+            event.target.classList.add('active', 'bg-white', 'text-black');
+            
+            items.forEach(item => {
+                if (type === 'all') {
+                    item.classList.remove('hidden');
+                } else {
+                    const itemTypes = item.getAttribute('data-type');
+                    if (itemTypes && itemTypes.includes(type)) {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                }
+            });
+        }
+        
+        // Handle contact form submission
+        document.getElementById('contact-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            alert('Thank you for your message! We will get back to you soon.');
+            this.reset();
+        });
+        
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('bg-black/95', 'py-4');
+                navbar.classList.remove('py-6');
+            } else {
+                navbar.classList.remove('bg-black/95', 'py-4');
+                navbar.classList.add('py-6');
+            }
+        });
+        
+        // Initialize active nav link
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('.nav-link').classList.add('text-white');
+        });
+    </script>
+</body>
+</html>
