@@ -1,0 +1,208 @@
+﻿{
+    "overview":  {
+                     "total_asteroids_today":  4,
+                     "hazardous_threats":  3,
+                     "global_risk_level":  "ð¡ MODERATE",
+                     "nearest_approach":  {
+                                              "asteroid_id":  "3542519",
+                                              "asteroid_name":  "(2010 PK9)",
+                                              "distance_km":  7230000,
+                                              "distance_lunar":  18.809,
+                                              "date":  "2026-02-07"
+                                          },
+                     "last_updated":  "2026-02-07 17:29:54"
+                 },
+    "today_asteroids":  [
+                            {
+                                "id":  "3542519",
+                                "name":  "(2010 PK9)",
+                                "is_potentially_hazardous":  true,
+                                "estimated_diameter_km":  0.284,
+                                "close_approach_date":  "2026-02-07",
+                                "miss_distance_km":  7230000,
+                                "relative_velocity_kph":  67600,
+                                "absolute_magnitude":  21.3,
+                                "orbiting_body":  "Earth",
+                                "discovery_date":  "2010-08-05",
+                                "orbit_class":  "Apollo",
+                                "risk_score":  66.5,
+                                "threat_level":  "â ï¸ HIGH",
+                                "threat_color":  "#ff6b00",
+                                "threat_description":  "Close monitoring needed",
+                                "size_category":  "ð¶ MEDIUM (0.1-1 km)",
+                                "distance_category":  "ð DISTANT"
+                            },
+                            {
+                                "id":  "3726710",
+                                "name":  "(2015 RC)",
+                                "is_potentially_hazardous":  false,
+                                "estimated_diameter_km":  0.041,
+                                "close_approach_date":  "2026-02-07",
+                                "miss_distance_km":  15400000,
+                                "relative_velocity_kph":  54200,
+                                "absolute_magnitude":  25.8,
+                                "orbiting_body":  "Earth",
+                                "discovery_date":  "2015-09-01",
+                                "orbit_class":  "Aten",
+                                "risk_score":  20.1,
+                                "threat_level":  "ð LOW",
+                                "threat_color":  "#00b894",
+                                "threat_description":  "Minimal concern",
+                                "size_category":  "ðµ SMALL (\u003c0.1 km)",
+                                "distance_category":  "ð DISTANT"
+                            },
+                            {
+                                "id":  "2465633",
+                                "name":  "465633 (2009 JR5)",
+                                "is_potentially_hazardous":  true,
+                                "estimated_diameter_km":  1.2,
+                                "close_approach_date":  "2026-02-07",
+                                "miss_distance_km":  12500000,
+                                "relative_velocity_kph":  58900,
+                                "absolute_magnitude":  17.8,
+                                "orbiting_body":  "Earth",
+                                "discovery_date":  "2009-05-03",
+                                "orbit_class":  "Apollo",
+                                "risk_score":  69,
+                                "threat_level":  "â ï¸ HIGH",
+                                "threat_color":  "#ff6b00",
+                                "threat_description":  "Close monitoring needed",
+                                "size_category":  "ð LARGE (â¥1 km)",
+                                "distance_category":  "ð DISTANT"
+                            },
+                            {
+                                "id":  "3752467",
+                                "name":  "(2016 CA30)",
+                                "is_potentially_hazardous":  true,
+                                "estimated_diameter_km":  0.048,
+                                "close_approach_date":  "2026-02-07",
+                                "miss_distance_km":  8900000,
+                                "relative_velocity_kph":  61200,
+                                "absolute_magnitude":  24.5,
+                                "orbiting_body":  "Earth",
+                                "discovery_date":  "2016-02-05",
+                                "orbit_class":  "Aten",
+                                "risk_score":  58.8,
+                                "threat_level":  "â ï¸ HIGH",
+                                "threat_color":  "#ff6b00",
+                                "threat_description":  "Close monitoring needed",
+                                "size_category":  "ðµ SMALL (\u003c0.1 km)",
+                                "distance_category":  "ð DISTANT"
+                            }
+                        ],
+    "upcoming_threats":  [
+                             {
+                                 "id":  "99942",
+                                 "name":  "Apophis",
+                                 "is_potentially_hazardous":  true,
+                                 "estimated_diameter_km":  0.34,
+                                 "close_approach_date":  "2029-04-13",
+                                 "miss_distance_km":  31600,
+                                 "relative_velocity_kph":  76500,
+                                 "absolute_magnitude":  19.7,
+                                 "orbiting_body":  "Earth",
+                                 "discovery_date":  "2004-06-19",
+                                 "orbit_class":  "Aten",
+                                 "note":  "Historic close approach in 2029",
+                                 "risk_score":  87.3,
+                                 "threat_level":  "ð¨ CRITICAL",
+                                 "threat_color":  "#ff0000",
+                                 "threat_description":  "Immediate attention required",
+                                 "size_category":  "ð¶ MEDIUM (0.1-1 km)",
+                                 "distance_category":  "ð¨ EXTREMELY CLOSE"
+                             },
+                             {
+                                 "id":  "101955",
+                                 "name":  "Bennu",
+                                 "is_potentially_hazardous":  true,
+                                 "estimated_diameter_km":  0.49,
+                                 "close_approach_date":  "2135-09-25",
+                                 "miss_distance_km":  750000,
+                                 "relative_velocity_kph":  63000,
+                                 "absolute_magnitude":  20.9,
+                                 "orbiting_body":  "Earth",
+                                 "discovery_date":  "1999-09-11",
+                                 "orbit_class":  "Apollo",
+                                 "note":  "NASA OSIRIS-REx mission target",
+                                 "risk_score":  73.9,
+                                 "threat_level":  "ð¨ CRITICAL",
+                                 "threat_color":  "#ff0000",
+                                 "threat_description":  "Immediate attention required",
+                                 "size_category":  "ð¶ MEDIUM (0.1-1 km)",
+                                 "distance_category":  "ðï¸ NEARBY"
+                             }
+                         ],
+    "statistics":  {
+                       "total_count":  4,
+                       "hazardous_count":  3,
+                       "hazardous_percentage":  75.0,
+                       "risk_analysis":  {
+                                             "average_risk":  53.6,
+                                             "max_risk":  69,
+                                             "min_risk":  20.1,
+                                             "risk_distribution":  {
+                                                                       "critical":  0,
+                                                                       "high":  3,
+                                                                       "moderate":  0,
+                                                                       "low":  1,
+                                                                       "minimal":  0
+                                                                   }
+                                         },
+                       "size_distribution":  {
+                                                 "large":  1,
+                                                 "medium":  1,
+                                                 "small":  2
+                                             },
+                       "closest_approach":  {
+                                                "asteroid_id":  "3542519",
+                                                "asteroid_name":  "(2010 PK9)",
+                                                "distance_km":  7230000,
+                                                "distance_lunar":  18.809,
+                                                "date":  "2026-02-07"
+                                            },
+                       "timestamp":  "2026-02-07T17:29:54.535514"
+                   },
+    "alerts":  [
+                   {
+                       "id":  "alert_001",
+                       "level":  "warning",
+                       "title":  "Close Approach Detected",
+                       "message":  "Asteroid (2010 PK9) passing within 7.2M km",
+                       "asteroid_id":  "3542519",
+                       "timestamp":  "2026-02-07T17:29:54.535514"
+                   },
+                   {
+                       "id":  "alert_002",
+                       "level":  "info",
+                       "title":  "Risk Level Increased",
+                       "message":  "Overall threat level elevated due to multiple approaches",
+                       "timestamp":  "2026-02-07T17:29:54.535514"
+                   }
+               ],
+    "visualization_data":  {
+                               "orbit_paths":  [
+                                                   {
+                                                       "asteroid":  "(2010 PK9)",
+                                                       "periapsis":  0.8,
+                                                       "apoapsis":  1.2
+                                                   },
+                                                   {
+                                                       "asteroid":  "Apophis",
+                                                       "periapsis":  0.7,
+                                                       "apoapsis":  1.4
+                                                   }
+                                               ],
+                               "threat_cones":  [
+                                                    {
+                                                        "angle":  45,
+                                                        "distance":  10,
+                                                        "risk":  "high"
+                                                    },
+                                                    {
+                                                        "angle":  30,
+                                                        "distance":  5,
+                                                        "risk":  "medium"
+                                                    }
+                                                ]
+                           }
+}

@@ -1,0 +1,61 @@
+﻿{
+    "success":  true,
+    "simulation":  true,
+    "warning":  "â ï¸ SIMULATION MODE - NOT REAL DATA",
+    "scenario":  {
+                     "name":  "Imminent Threat Simulation",
+                     "description":  "Demonstration of system response to a high-risk asteroid",
+                     "time_to_impact":  "7 days",
+                     "evacuation_zones":  [
+                                              "Pacific Rim",
+                                              "Coastal Areas"
+                                          ],
+                     "estimated_impact_energy":  "50 megatons"
+                 },
+    "asteroid":  {
+                     "id":  "sim_001",
+                     "name":  "SIMULATED THREAT",
+                     "is_potentially_hazardous":  true,
+                     "estimated_diameter_km":  0.8,
+                     "close_approach_date":  "2026-02-14",
+                     "miss_distance_km":  150000,
+                     "relative_velocity_kph":  72000,
+                     "absolute_magnitude":  20.5,
+                     "orbiting_body":  "Earth",
+                     "discovery_date":  "2026-02-07",
+                     "orbit_class":  "Apollo",
+                     "risk_score":  86.0,
+                     "threat_level":  "ð¨ CRITICAL",
+                     "threat_color":  "#ff0000",
+                     "threat_description":  "Immediate attention required",
+                     "size_category":  "ð¶ MEDIUM (0.1-1 km)",
+                     "distance_category":  "â ï¸ VERY CLOSE"
+                 },
+    "response":  {
+                     "deflection_options":  [
+                                                {
+                                                    "method":  "Kinetic Impactor",
+                                                    "success_probability":  "65%"
+                                                },
+                                                {
+                                                    "method":  "Gravity Tractor",
+                                                    "success_probability":  "40%"
+                                                },
+                                                {
+                                                    "method":  "Nuclear Deflection",
+                                                    "success_probability":  "85%"
+                                                }
+                                            ],
+                     "evacuation_plan":  {
+                                             "affected_population":  "10 million",
+                                             "evacuation_time":  "72 hours",
+                                             "shelters_available":  "5000"
+                                         },
+                     "communication_plan":  [
+                                                "Alert government agencies",
+                                                "Public warning system activation",
+                                                "International coordination"
+                                            ]
+                 },
+    "timestamp":  "2026-02-07T17:29:54.562560"
+}

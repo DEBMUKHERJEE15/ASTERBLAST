@@ -1,0 +1,3226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stellar Observatory | Professional Astronomy Platform</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS for Heatmap -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.161/build/three.module.js",
+          "jsm/": "https://cdn.jsdelivr.net/npm/three@0.161/examples/jsm/"
+        }
+      }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Space+Mono:wght@400;700&display=swap');
+        
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #141414;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --accent: #ffffff;
+            --border: #1a1a1a;
+            --glow: rgba(255, 255, 255, 0.1);
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+        
+        /* Three.js Canvas */
+        #three-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -1; /* Changed to background */
+        }
+        
+        .page-transition {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        .page-transition.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .mono-font {
+            font-family: 'Space Mono', monospace;
+        }
+        
+        .bg-grid {
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        
+        .text-glow {
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 2px solid var(--border);
+            border-top-color: var(--text-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Earth background enhancement */
+        .earth-bg {
+            background-image: url('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+        
+        .earth-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.9) 70%);
+        }
+
+        /* Login Modal */
+        .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+        
+        .login-modal.active {
+            display: flex;
+        }
+        
+        .login-container {
+            background: rgba(10, 10, 10, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .login-form label {
+            display: block;
+            color: #888888;
+            font-size: 0.875rem;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .login-form input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+        }
+        
+        .login-form input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .login-error {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+        }
+        
+        .login-error.show {
+            display: block;
+        }
+
+        /* AI Assistant Styles */
+        #ai-assistant-toggle {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        #ai-assistant-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        #ai-assistant {
+            position: fixed;
+            bottom: 170px;
+            right: 30px;
+            width: 350px;
+            height: 500px;
+            background: rgba(10, 10, 10, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            display: none;
+            flex-direction: column;
+            z-index: 999;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .ai-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .ai-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .ai-message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .ai-user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .ai-assistant {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ai-input-container {
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 10px;
+        }
+
+        .ai-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 12px 20px;
+            color: white;
+            outline: none;
+        }
+
+        .ai-input:focus {
+            border-color: #667eea;
+        }
+
+        .ai-send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+        }
+
+        .ai-typing {
+            display: none;
+            align-items: center;
+            gap: 5px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            margin: 10px 20px;
+            align-self: flex-start;
+        }
+
+        .ai-typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .ai-typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .ai-typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+        }
+
+        /* Navigation Fix */
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+
+        .nav-link.active {
+            color: white;
+            border-bottom: 2px solid white;
+        }
+
+        /* Risk Analyzer Styles */
+        .risk-meter {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .risk-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .risk-low { background: linear-gradient(90deg, #10b981, #34d399); }
+        .risk-medium { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .risk-high { background: linear-gradient(90deg, #ef4444, #f87171); }
+        .risk-critical { background: linear-gradient(90deg, #7c2d12, #dc2626); }
+
+        .risk-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .risk-score {
+            font-size: 2.5rem;
+            font-weight: 800;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .risk-factor {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 4px solid transparent;
+        }
+
+        .risk-factor.critical { border-left-color: #ef4444; }
+        .risk-factor.high { border-left-color: #f59e0b; }
+        .risk-factor.medium { border-left-color: #3b82f6; }
+        .risk-factor.low { border-left-color: #10b981; }
+        
+        /* Real-time Dashboard Styles */
+        .metric-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            font-family: 'Space Mono', monospace;
+            line-height: 1;
+        }
+        
+        .metric-change {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        
+        .metric-change.positive {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        
+        .metric-change.negative {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        
+        .metric-change.neutral {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+        
+        /* Heatmap Styles */
+        #heatmap {
+            height: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .leaflet-container {
+            background: #0a0a0a !important;
+        }
+        
+        .leaflet-tile {
+            filter: invert(1) hue-rotate(180deg) brightness(0.6) contrast(3) !important;
+        }
+        
+        .leaflet-control {
+            background: rgba(0, 0, 0, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .leaflet-control-zoom a {
+            background: rgba(0, 0, 0, 0.8) !important;
+            color: white !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .heatmap-legend {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Status Indicators */
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-safe { background-color: #22c55e; }
+        .status-warning { background-color: #f59e0b; }
+        .status-danger { background-color: #ef4444; }
+        .status-critical { background-color: #dc2626; animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Real-time Data Stream */
+        .data-stream {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .data-item {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s ease;
+        }
+        
+        .data-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .data-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* Live Alert */
+        .live-alert {
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+            border-left: 4px solid #ef4444;
+            padding: 16px;
+            border-radius: 8px;
+            animation: alert-pulse 2s infinite;
+        }
+        
+        @keyframes alert-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        /* Login Button in Nav */
+        .login-btn-nav {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            transition: all 0.3s ease;
+        }
+        
+        .login-btn-nav:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .logout-btn-nav {
+            background: rgba(239, 68, 68, 0.2);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            transition: all 0.3s ease;
+        }
+        
+        .logout-btn-nav:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="bg-black text-white">
+    <!-- Login Modal -->
+    <div id="loginModal" class="login-modal">
+        <div class="login-container">
+            <div class="login-header">
+                <h2 class="text-2xl font-bold mb-2">Stellar Observatory</h2>
+                <p class="text-gray-400 text-sm">Access the professional astronomy platform</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                </div>
+                <div id="loginError" class="login-error">Invalid username or password</div>
+                <button type="submit" class="login-btn">Login to Observatory</button>
+                <div class="mt-4 text-center text-gray-400 text-sm">
+                    <p>Demo credentials:</p>
+                    <p class="mono-font">admin / observatory123</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="text-gray-400 uppercase tracking-widest text-sm">LOADING STELLAR OBSERVATORY...</div>
+    </div>
+
+    <!-- AI Assistant -->
+    <div id="ai-assistant-toggle">
+        <i class="fas fa-robot text-2xl"></i>
+    </div>
+
+    <div id="ai-assistant">
+        <div class="ai-header">
+            <h3 class="font-bold text-lg">Cosmic AI Assistant</h3>
+            <p class="text-sm opacity-90">Ask me about asteroids, space, or our observatory</p>
+        </div>
+        <div class="ai-messages" id="ai-messages">
+            <div class="ai-message ai-assistant">
+                👋 Hello! I'm your Cosmic AI Assistant. I can help you with:
+                • Asteroid information and tracking
+                • Space research and data
+                • Observatory features
+                • Planetary defense
+                What would you like to know?
+            </div>
+        </div>
+        <div class="ai-typing" id="ai-typing">
+            <div class="ai-typing-dot"></div>
+            <div class="ai-typing-dot"></div>
+            <div class="ai-typing-dot"></div>
+        </div>
+        <div class="ai-input-container">
+            <input type="text" id="ai-input" class="ai-input" placeholder="Ask about asteroids, space, or research..." maxlength="500">
+            <button id="ai-send" class="ai-send-btn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Three.js Canvas -->
+    <canvas id="three-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 py-6 px-8 lg:px-12 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent backdrop-blur-md border-b border-gray-800 z-50 transition-all duration-300">
+        <div class="mono-font font-bold text-xl tracking-widest cursor-pointer" onclick="navigateTo('home')">STELLAR OBSERVATORY</div>
+        
+        <div class="menu-toggle lg:hidden flex flex-col gap-1 cursor-pointer" onclick="toggleMenu()">
+            <span class="w-6 h-0.5 bg-white"></span>
+            <span class="w-6 h-0.5 bg-white"></span>
+            <span class="w-6 h-0.5 bg-white"></span>
+        </div>
+        
+        <ul class="nav-links hidden lg:flex gap-10 list-none items-center">
+            <li><a href="#" class="nav-link text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300 active" onclick="navigateTo('home')">Home</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('dashboard')">Dashboard</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('observatory')">Observatory</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('tracking')">Tracking</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('heatmap')">Heatmap</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('research')">Research</a></li>
+            <li><a href="#" class="nav-link text-gray-400 hover:text-white uppercase text-xs font-medium tracking-widest transition-colors duration-300" onclick="navigateTo('contact')">Contact</a></li>
+            <li id="loginNavItem">
+                <button onclick="showLogin()" class="login-btn-nav">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Login
+                </button>
+            </li>
+        </ul>
+        
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="lg:hidden absolute top-full left-0 right-0 bg-black/95 border-b border-gray-800 hidden flex-col p-6">
+            <a href="#" class="nav-link-mobile py-4 text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800 active" onclick="navigateTo('home')">Home</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('dashboard')">Dashboard</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('observatory')">Observatory</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('tracking')">Tracking</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('heatmap')">Heatmap</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('research')">Research</a>
+            <a href="#" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800" onclick="navigateTo('contact')">Contact</a>
+            <button onclick="showLogin()" class="nav-link-mobile py-4 text-gray-400 hover:text-white uppercase text-sm font-medium tracking-widest transition-colors duration-300 border-b border-gray-800 text-left">
+                <i class="fas fa-sign-in-alt mr-2"></i> Login
+            </button>
+        </div>
+    </nav>
+
+    <!-- Page Container -->
+    <div id="page-container" class="pt-20">
+        <!-- Home Page -->
+        <div id="home-page" class="page min-h-screen flex flex-col justify-center items-center text-center px-6 page-transition active earth-bg">
+            <div class="relative z-10 max-w-6xl mx-auto">
+                <h1 class="text-6xl md:text-8xl lg:text-9xl font-black leading-none mb-8 text-glow">OBSERVING<br><span class="text-gray-300">THE COSMOS</span></h1>
+                <p class="text-gray-400 text-lg md:text-xl uppercase tracking-widest mb-12">Advanced Astronomical Visualization</p>
+                <button class="bg-white text-black px-10 py-4 font-semibold uppercase tracking-widest text-sm hover:bg-transparent hover:text-white border border-white transition-all duration-300" onclick="navigateTo('dashboard')">
+                    View Live Dashboard
+                </button>
+            </div>
+            <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 text-gray-500 uppercase tracking-widest text-xs animate-bounce">
+                <i class="fas fa-chevron-down"></i>
+            </div>
+        </div>
+
+        <!-- Real-time Dashboard Page -->
+        <div id="dashboard-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-7xl mx-auto">
+                <!-- Header -->
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12">
+                    <div class="mb-8 lg:mb-0">
+                        <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">Real-time Dashboard</h2>
+                        <p class="text-gray-400">Live monitoring of space threats and observatory operations</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <div class="text-xs text-gray-500 uppercase tracking-widest">Last Updated</div>
+                            <div class="mono-font text-sm" id="dashboard-update-time">--:--:-- UTC</div>
+                        </div>
+                        <button class="px-6 py-2 bg-white text-black text-xs uppercase tracking-widest font-semibold hover:bg-gray-100 transition-colors duration-300" onclick="refreshDashboard()">
+                            <i class="fas fa-sync-alt mr-2"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- System Status -->
+                <div class="mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="metric-card">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <div class="text-gray-400 text-xs uppercase tracking-widest mb-2">Overall Status</div>
+                                    <div class="flex items-center">
+                                        <span class="status-indicator status-safe mr-2"></span>
+                                        <span class="font-semibold text-green-500">NORMAL</span>
+                                    </div>
+                                </div>
+                                <i class="fas fa-shield-alt text-green-500 text-xl"></i>
+                            </div>
+                            <div class="text-xs text-gray-400">All systems operational</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <div class="text-gray-400 text-xs uppercase tracking-widest mb-2">Active Threats</div>
+                                    <div class="flex items-center">
+                                        <span class="status-indicator status-warning mr-2"></span>
+                                        <span class="font-semibold text-yellow-500">2 OBJECTS</span>
+                                    </div>
+                                </div>
+                                <i class="fas fa-exclamation-triangle text-yellow-500 text-xl"></i>
+                            </div>
+                            <div class="text-xs text-gray-400">Currently being monitored</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <div class="text-gray-400 text-xs uppercase tracking-widest mb-2">Network Status</div>
+                                    <div class="flex items-center">
+                                        <span class="status-indicator status-safe mr-2"></span>
+                                        <span class="font-semibold text-green-500">42/42 ONLINE</span>
+                                    </div>
+                                </div>
+                                <i class="fas fa-satellite text-blue-500 text-xl"></i>
+                            </div>
+                            <div class="text-xs text-gray-400">Global telescope network</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <div class="text-gray-400 text-xs uppercase tracking-widest mb-2">Response Time</div>
+                                    <div class="metric-value text-green-500">98.7%</div>
+                                </div>
+                                <i class="fas fa-bolt text-purple-500 text-xl"></i>
+                            </div>
+                            <div class="text-xs text-gray-400">Planetary defense readiness</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Live Alerts -->
+                <div class="mb-8">
+                    <div class="live-alert">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-exclamation-circle text-red-500 text-xl mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold">HIGH PRIORITY ALERT</h4>
+                                    <p class="text-gray-300 text-sm">Asteroid 2025 PK9 approaching Earth at 0.89 LD. Enhanced monitoring activated.</p>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-400">Updated 5 min ago</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Metrics Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                    <!-- Left Column -->
+                    <div class="lg:col-span-2 space-y-8">
+                        <!-- Threat Assessment -->
+                        <div class="metric-card">
+                            <h3 class="text-xl font-semibold mb-6">Current Threat Assessment</h3>
+                            <div class="space-y-6">
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2">
+                                        <span class="text-gray-400">Immediate Threats (0-7 days)</span>
+                                        <span class="font-semibold">1 object</span>
+                                    </div>
+                                    <div class="w-full bg-gray-800 rounded-full h-2">
+                                        <div class="bg-red-500 h-2 rounded-full" style="width: 15%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2">
+                                        <span class="text-gray-400">Medium-term Threats (7-30 days)</span>
+                                        <span class="font-semibold">3 objects</span>
+                                    </div>
+                                    <div class="w-full bg-gray-800 rounded-full h-2">
+                                        <div class="bg-yellow-500 h-2 rounded-full" style="width: 30%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2">
+                                        <span class="text-gray-400">Long-term Threats (30+ days)</span>
+                                        <span class="font-semibold">8 objects</span>
+                                    </div>
+                                    <div class="w-full bg-gray-800 rounded-full h-2">
+                                        <div class="bg-blue-500 h-2 rounded-full" style="width: 65%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Real-time Data Stream -->
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-xl font-semibold">Live Data Stream</h3>
+                                <span class="px-3 py-1 bg-green-500/20 text-green-500 rounded-full text-xs uppercase tracking-widest">ACTIVE</span>
+                            </div>
+                            <div class="data-stream" id="live-data-stream">
+                                <!-- Will be populated by JavaScript -->
+                                <div class="data-item">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm">2024 BX1 position update</span>
+                                        <span class="text-xs text-gray-400">Now</span>
+                                    </div>
+                                    <div class="text-xs text-gray-400">Trajectory confirmed, no adjustments needed</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div class="space-y-8">
+                        <!-- Closest Approaches -->
+                        <div class="metric-card">
+                            <h3 class="text-xl font-semibold mb-6">Closest Approaches (24h)</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                                    <div class="flex items-center">
+                                        <span class="status-indicator status-critical mr-3"></span>
+                                        <div>
+                                            <div class="font-medium">2025 PK9</div>
+                                            <div class="text-xs text-gray-400">0.89 LD</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-red-500 text-sm font-semibold">HIGH RISK</div>
+                                        <div class="text-xs text-gray-400">In 18h</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                                    <div class="flex items-center">
+                                        <span class="status-indicator status-warning mr-3"></span>
+                                        <div>
+                                            <div class="font-medium">2024 BX1</div>
+                                            <div class="text-xs text-gray-400">0.42 LD</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-yellow-500 text-sm font-semibold">MEDIUM RISK</div>
+                                        <div class="text-xs text-gray-400">In 6h</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                                    <div class="flex items-center">
+                                        <span class="status-indicator status-safe mr-3"></span>
+                                        <div>
+                                            <div class="font-medium">C/2023 A3</div>
+                                            <div class="text-xs text-gray-400">2.1 LD</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-green-500 text-sm font-semibold">LOW RISK</div>
+                                        <div class="text-xs text-gray-400">In 12h</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- System Performance -->
+                        <div class="metric-card">
+                            <h3 class="text-xl font-semibold mb-6">System Performance</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-gray-400">Tracking Accuracy</span>
+                                        <span class="font-semibold">99.2%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-800 rounded-full h-2">
+                                        <div class="bg-green-500 h-2 rounded-full" style="width: 99.2%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-gray-400">Data Processing</span>
+                                        <span class="font-semibold">2.4M/sec</span>
+                                    </div>
+                                    <div class="w-full bg-gray-800 rounded-full h-2">
+                                        <div class="bg-blue-500 h-2 rounded-full" style="width: 85%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-gray-400">AI Analysis</span>
+                                        <span class="font-semibold">96.5%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-800 rounded-full h-2">
+                                        <div class="bg-purple-500 h-2 rounded-full" style="width: 96.5%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Events -->
+                <div class="metric-card">
+                    <h3 class="text-xl font-semibold mb-6">Recent Events & Alerts</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-800">
+                                    <th class="text-left py-3 px-4 text-gray-400 text-sm uppercase tracking-widest">Time</th>
+                                    <th class="text-left py-3 px-4 text-gray-400 text-sm uppercase tracking-widest">Event</th>
+                                    <th class="text-left py-3 px-4 text-gray-400 text-sm uppercase tracking-widest">Object</th>
+                                    <th class="text-left py-3 px-4 text-gray-400 text-sm uppercase tracking-widest">Severity</th>
+                                    <th class="text-left py-3 px-4 text-gray-400 text-sm uppercase tracking-widest">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-events">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observatory Page -->
+        <div id="observatory-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-10">Observatory Metrics</h2>
+                <p class="text-gray-400 text-lg max-w-2xl mb-16">
+                    Real-time data from our global network of telescopes and tracking stations.
+                </p>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-gray-800" id="observatory-metrics">
+                    <!-- Will be populated by JavaScript -->
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Near-Earth Objects</div>
+                        <div class="mono-font text-5xl font-bold mb-2" id="neo-count">Loading...</div>
+                        <p class="text-gray-500 text-sm">Currently tracked celestial bodies</p>
+                    </div>
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Safety Index</div>
+                        <div class="mono-font text-5xl font-bold mb-2" id="safety-index">Loading...</div>
+                        <p class="text-gray-500 text-sm">Planetary defense readiness</p>
+                    </div>
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Closest Approach</div>
+                        <div class="mono-font text-5xl font-bold mb-2" id="closest-approach">Loading...</div>
+                        <p class="text-gray-500 text-sm">Nearest object distance</p>
+                    </div>
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Risk Assessment</div>
+                        <div class="mono-font text-5xl font-bold mb-2" id="risk-assessment">Loading...</div>
+                        <p class="text-gray-500 text-sm">Current threat level</p>
+                    </div>
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Active Telescopes</div>
+                        <div class="mono-font text-5xl font-bold mb-2" id="telescope-count">42</div>
+                        <p class="text-gray-500 text-sm">Global observation network</p>
+                    </div>
+                    <div class="bg-black p-10 text-center hover:bg-gray-900 transition-colors duration-300">
+                        <div class="text-gray-400 uppercase tracking-widest text-xs mb-6">Data Points</div>
+                        <div class="mono-font text-5xl font-bold mb-2" id="data-points">Loading...</div>
+                        <p class="text-gray-500 text-sm">Collected this month</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tracking Page -->
+        <div id="tracking-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12">
+                    <div class="mb-8 lg:mb-0">
+                        <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">Live Tracking</h2>
+                        <p class="text-gray-400">Real-time monitoring of near-Earth objects</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <button class="filter-btn px-6 py-2 border border-gray-800 text-gray-400 text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 active" onclick="filterTracking('all')">All</button>
+                        <button class="filter-btn px-6 py-2 border border-gray-800 text-gray-400 text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300" onclick="filterTracking('hazardous')">Hazardous</button>
+                        <button class="filter-btn px-6 py-2 border border-gray-800 text-gray-400 text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300" onclick="filterTracking('close')">Close</button>
+                        <button class="filter-btn px-6 py-2 border border-gray-800 text-white bg-white text-xs uppercase tracking-widest transition-all duration-300" onclick="fetchRealAsteroids()">Live Data</button>
+                    </div>
+                </div>
+                
+                <div class="space-y-px bg-gray-800" id="tracking-feed">
+                    <!-- Will be populated by JavaScript -->
+                    <div class="bg-black p-8 text-center">
+                        <div class="loading-spinner mx-auto mb-4"></div>
+                        <p class="text-gray-400">Loading real-time asteroid data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Heatmap Page -->
+        <div id="heatmap-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12">
+                    <div class="mb-8 lg:mb-0">
+                        <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">Global Risk Heatmap</h2>
+                        <p class="text-gray-400">Real-time visualization of asteroid close approaches with risk assessment</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <div class="text-xs text-gray-500 uppercase tracking-widest">Last Update</div>
+                            <div class="mono-font text-sm" id="heatmap-update-time">--:--:-- UTC</div>
+                        </div>
+                        <button class="px-6 py-2 bg-white text-black text-xs uppercase tracking-widest font-semibold hover:bg-gray-100 transition-colors duration-300" onclick="refreshHeatmap()">
+                            <i class="fas fa-sync-alt mr-2"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Risk Legend -->
+                <div class="mb-8">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="flex items-center p-4 bg-gray-900/50 rounded-lg">
+                            <div class="w-4 h-4 rounded-full bg-green-500 mr-3"></div>
+                            <div>
+                                <div class="font-semibold">Low Risk</div>
+                                <div class="text-xs text-gray-400">0.1-0.5 LD</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center p-4 bg-gray-900/50 rounded-lg">
+                            <div class="w-4 h-4 rounded-full bg-yellow-500 mr-3"></div>
+                            <div>
+                                <div class="font-semibold">Medium Risk</div>
+                                <div class="text-xs text-gray-400">0.05-0.1 LD</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center p-4 bg-gray-900/50 rounded-lg">
+                            <div class="w-4 h-4 rounded-full bg-orange-500 mr-3"></div>
+                            <div>
+                                <div class="font-semibold">High Risk</div>
+                                <div class="text-xs text-gray-400">0.01-0.05 LD</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center p-4 bg-gray-900/50 rounded-lg">
+                            <div class="w-4 h-4 rounded-full bg-red-500 mr-3"></div>
+                            <div>
+                                <div class="font-semibold">Critical Risk</div>
+                                <div class="text-xs text-gray-400">&lt;0.01 LD</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Heatmap Container -->
+                <div id="heatmap" class="mb-8"></div>
+                
+                <!-- Risk Distribution -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                    <div class="metric-card">
+                        <h3 class="text-xl font-semibold mb-6">Risk Distribution</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-400">Low Risk</span>
+                                    <span class="font-semibold">187 objects</span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full" style="width: 75%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-400">Medium Risk</span>
+                                    <span class="font-semibold">42 objects</span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-2">
+                                    <div class="bg-yellow-500 h-2 rounded-full" style="width: 17%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-400">High Risk</span>
+                                    <span class="font-semibold">15 objects</span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-2">
+                                    <div class="bg-orange-500 h-2 rounded-full" style="width: 6%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-400">Critical Risk</span>
+                                    <span class="font-semibold">3 objects</span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-2">
+                                    <div class="bg-red-500 h-2 rounded-full" style="width: 1%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <h3 class="text-xl font-semibold mb-6">Recent Close Approaches</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                                <div>
+                                    <div class="font-medium">2025 PK9</div>
+                                    <div class="text-xs text-gray-400">0.89 LD • Medium Risk</div>
+                                </div>
+                                <div class="text-yellow-500 text-sm font-semibold">5h ago</div>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                                <div>
+                                    <div class="font-medium">2024 BX1</div>
+                                    <div class="text-xs text-gray-400">0.42 LD • Medium Risk</div>
+                                </div>
+                                <div class="text-yellow-500 text-sm font-semibold">2h ago</div>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                                <div>
+                                    <div class="font-medium">C/2023 A3</div>
+                                    <div class="text-xs text-gray-400">2.1 LD • Low Risk</div>
+                                </div>
+                                <div class="text-green-500 text-sm font-semibold">8h ago</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <h3 class="text-xl font-semibold mb-6">Regional Hotspots</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">North America</span>
+                                <span class="px-2 py-1 bg-red-500/20 text-red-500 rounded text-xs">High</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Europe</span>
+                                <span class="px-2 py-1 bg-yellow-500/20 text-yellow-500 rounded text-xs">Medium</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Asia-Pacific</span>
+                                <span class="px-2 py-1 bg-orange-500/20 text-orange-500 rounded text-xs">High</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">South America</span>
+                                <span class="px-2 py-1 bg-green-500/20 text-green-500 rounded text-xs">Low</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Research Page -->
+        <div id="research-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-10">Research & Risk Analysis</h2>
+                <p class="text-gray-400 text-lg max-w-2xl mb-16">
+                    Advanced risk assessment and analysis of near-Earth objects using our proprietary algorithms.
+                </p>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+                    <!-- Risk Analyzer -->
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <span class="inline-block bg-gray-800 px-4 py-1 text-xs uppercase tracking-widest mb-6">Risk Analyzer</span>
+                        <h3 class="text-xl font-semibold mb-4">Real-time Asteroid Risk Assessment</h3>
+                        <p class="text-gray-400 mb-6">Analyze the threat level of any asteroid based on multiple risk factors.</p>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-gray-400 text-xs uppercase tracking-widest mb-2">Select Asteroid for Analysis</label>
+                                <select id="asteroid-select" class="w-full bg-gray-900/50 border border-gray-800 px-4 py-3 text-white focus:outline-none focus:border-white transition-colors duration-300">
+                                    <option value="">Select an asteroid...</option>
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            
+                            <div id="risk-analysis-result" class="hidden">
+                                <div class="border-t border-gray-800 pt-6 mt-6">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h4 class="font-semibold">Overall Risk Score</h4>
+                                        <div class="risk-score" id="risk-score">0</div>
+                                    </div>
+                                    
+                                    <div class="risk-meter">
+                                        <div class="risk-fill" id="risk-meter-fill"></div>
+                                    </div>
+                                    
+                                    <div class="flex justify-between text-xs text-gray-400 mt-2">
+                                        <span>Low</span>
+                                        <span>Medium</span>
+                                        <span>High</span>
+                                        <span>Critical</span>
+                                    </div>
+                                    
+                                    <div class="mt-6">
+                                        <h5 class="text-gray-400 text-sm uppercase tracking-widest mb-3">Risk Factors</h5>
+                                        <div id="risk-factors"></div>
+                                    </div>
+                                    
+                                    <div class="mt-6 p-4 bg-gray-900/30 rounded-lg">
+                                        <h5 class="font-semibold mb-2">Recommendation</h5>
+                                        <p class="text-gray-400 text-sm" id="risk-recommendation"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button onclick="analyzeSelectedAsteroid()" class="w-full bg-white text-black px-6 py-3 font-semibold uppercase tracking-widest text-sm hover:bg-transparent hover:text-white border border-white transition-all duration-300">
+                                Analyze Risk
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Risk Factors Explanation -->
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <span class="inline-block bg-gray-800 px-4 py-1 text-xs uppercase tracking-widest mb-6">Risk Methodology</span>
+                        <h3 class="text-xl font-semibold mb-4">How We Calculate Risk</h3>
+                        <p class="text-gray-400 mb-6">Our risk assessment algorithm considers multiple factors:</p>
+                        
+                        <div class="space-y-4">
+                            <div class="risk-factor high">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium">Distance to Earth</span>
+                                    <span class="text-yellow-500 font-bold">Weight: 35%</span>
+                                </div>
+                                <p class="text-gray-400 text-sm mt-1">Closer asteroids pose higher immediate threat.</p>
+                            </div>
+                            
+                            <div class="risk-factor critical">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium">Object Size</span>
+                                    <span class="text-red-500 font-bold">Weight: 30%</span>
+                                </div>
+                                <p class="text-gray-400 text-sm mt-1">Larger asteroids cause more damage upon impact.</p>
+                            </div>
+                            
+                            <div class="risk-factor medium">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium">Velocity</span>
+                                    <span class="text-blue-500 font-bold">Weight: 20%</span>
+                                </div>
+                                <p class="text-gray-400 text-sm mt-1">Higher speed increases impact energy.</p>
+                            </div>
+                            
+                            <div class="risk-factor low">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium">Orbit Uncertainty</span>
+                                    <span class="text-green-500 font-bold">Weight: 15%</span>
+                                </div>
+                                <p class="text-gray-400 text-sm mt-1">Less predictable orbits are harder to track.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-8 p-4 bg-gray-900/30 rounded-lg">
+                            <h5 class="font-semibold mb-2">Risk Score Interpretation</h5>
+                            <ul class="text-gray-400 text-sm space-y-2">
+                                <li><span class="text-green-500 font-bold">0-25:</span> Low Risk - Minimal threat</li>
+                                <li><span class="text-yellow-500 font-bold">26-50:</span> Medium Risk - Requires monitoring</li>
+                                <li><span class="text-orange-500 font-bold">51-75:</span> High Risk - Enhanced tracking needed</li>
+                                <li><span class="text-red-500 font-bold">76-100:</span> Critical Risk - Immediate action required</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <span class="inline-block bg-gray-800 px-4 py-1 text-xs uppercase tracking-widest mb-6">Planetary Defense</span>
+                        <h3 class="text-xl font-semibold mb-4">Asteroid Deflection Simulations</h3>
+                        <p class="text-gray-400 mb-6">Advanced computational modeling of kinetic impactor missions for potentially hazardous asteroids.</p>
+                        <a href="#" class="text-white text-sm uppercase tracking-widest font-semibold inline-flex items-center gap-2 hover:gap-4 transition-all duration-300" onclick="runDeflectionSimulation()">
+                            Run Simulation <i class="fas fa-play"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <span class="inline-block bg-gray-800 px-4 py-1 text-xs uppercase tracking-widest mb-6">Deep Space</span>
+                        <h3 class="text-xl font-semibold mb-4">Exoplanet Atmosphere Analysis</h3>
+                        <p class="text-gray-400 mb-6">Utilizing spectroscopy to detect biosignatures in the atmospheres of distant exoplanets.</p>
+                        <a href="#" class="text-white text-sm uppercase tracking-widest font-semibold inline-flex items-center gap-2 hover:gap-4 transition-all duration-300">
+                            Read More <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="bg-gray-900/50 border border-gray-800 p-8 card-hover">
+                        <span class="inline-block bg-gray-800 px-4 py-1 text-xs uppercase tracking-widest mb-6">AI & Machine Learning</span>
+                        <h3 class="text-xl font-semibold mb-4">Automated Object Classification</h3>
+                        <p class="text-gray-400 mb-6">Developing neural networks to automatically classify and track celestial objects.</p>
+                        <a href="#" class="text-white text-sm uppercase tracking-widest font-semibold inline-flex items-center gap-2 hover:gap-4 transition-all duration-300">
+                            Read More <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Page -->
+        <div id="contact-page" class="page min-h-screen hidden px-6 md:px-12 lg:px-20 py-20 page-transition">
+            <div class="max-w-5xl mx-auto">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-10">Get In Touch</h2>
+                <p class="text-gray-400 text-lg mb-16 max-w-2xl">
+                    Interested in collaboration, data access, or learning more about our research? 
+                    Contact our team today.
+                </p>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                    <div>
+                        <form id="contact-form" class="space-y-8">
+                            <div>
+                                <label class="block text-gray-400 text-xs uppercase tracking-widest mb-2" for="name">Name</label>
+                                <input type="text" id="name" name="name" required class="w-full bg-gray-900/50 border border-gray-800 px-6 py-4 text-white focus:outline-none focus:border-white transition-colors duration-300">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-400 text-xs uppercase tracking-widest mb-2" for="email">Email</label>
+                                <input type="email" id="email" name="email" required class="w-full bg-gray-900/50 border border-gray-800 px-6 py-4 text-white focus:outline-none focus:border-white transition-colors duration-300">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-400 text-xs uppercase tracking-widest mb-2" for="message">Message</label>
+                                <textarea id="message" name="message" required rows="6" class="w-full bg-gray-900/50 border border-gray-800 px-6 py-4 text-white focus:outline-none focus:border-white transition-colors duration-300"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="bg-white text-black px-10 py-4 font-semibold uppercase tracking-widest text-sm hover:bg-transparent hover:text-white border border-white transition-all duration-300">
+                                Send Message
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div class="space-y-10">
+                        <div class="text-center p-10 bg-gray-900/50 border border-gray-800">
+                            <div class="text-3xl mb-6"><i class="fas fa-envelope"></i></div>
+                            <h4 class="text-gray-400 text-xs uppercase tracking-widest mb-4">Email</h4>
+                            <p>contact@stellar-observatory.org</p>
+                        </div>
+                        
+                        <div class="text-center p-10 bg-gray-900/50 border border-gray-800">
+                            <div class="text-3xl mb-6"><i class="fas fa-phone"></i></div>
+                            <h4 class="text-gray-400 text-xs uppercase tracking-widest mb-4">Phone</h4>
+                            <p>+1 (555) 123-4567</p>
+                        </div>
+                        
+                        <div class="text-center p-10 bg-gray-900/50 border border-gray-800">
+                            <div class="text-3xl mb-6"><i class="fas fa-map-marker-alt"></i></div>
+                            <h4 class="text-gray-400 text-xs uppercase tracking-widest mb-4">Location</h4>
+                            <p>Observatory HQ, Arizona</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-12 px-6 text-center">
+        <p class="text-gray-500 text-sm uppercase tracking-widest">STELLAR OBSERVATORY © 2026 — PROFESSIONAL ASTRONOMICAL VISUALIZATION PLATFORM</p>
+        <p class="text-gray-600 text-xs mt-2">Connected to Cosmic Watch Backend API | Real-time NASA Data</p>
+    </footer>
+
+    <!-- Controls -->
+    <div class="fixed bottom-10 right-10 flex flex-col gap-4 z-40">
+        <button class="control-btn w-14 h-14 bg-gray-900/50 backdrop-blur-md border border-gray-800 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300" id="rotateBtn" title="Rotate">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+        <button class="control-btn w-14 h-14 bg-gray-900/50 backdrop-blur-md border border-gray-800 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300" id="resetBtn" title="Reset View">
+            <i class="fas fa-compress"></i>
+        </button>
+        <button class="control-btn w-14 h-14 bg-gray-900/50 backdrop-blur-md border border-gray-800 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300" id="orbitsBtn" title="Toggle View">
+            <i class="fas fa-globe"></i>
+        </button>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script type="module">
+        // Your existing Three.js code remains the same
+        import * as THREE from 'three';
+        import { OrbitControls } from 'jsm/controls/OrbitControls.js';
+
+        // Scene setup
+        let scene, camera, renderer, controls;
+        let earth, earthClouds, earthAtmosphere;
+        let planets = [];
+        let asteroids = [];
+        let sun;
+        let autoRotate = false;
+        let textureLoader;
+
+        // Initialize
+        init();
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.FogExp2(0x000000, 0.00015);
+
+            // Camera - Adjusted for larger Earth background
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 0, 40); // Closer to make Earth appear larger
+
+            // Renderer
+            const canvas = document.getElementById('three-canvas');
+            renderer = new THREE.WebGLRenderer({ 
+                canvas,
+                antialias: true,
+                alpha: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enableZoom = true;
+            controls.enablePan = false;
+            controls.minDistance = 20; // Closer minimum distance
+            controls.maxDistance = 150;
+            controls.autoRotate = autoRotate;
+            controls.autoRotateSpeed = 0.3;
+
+            // Texture Loader
+            textureLoader = new THREE.TextureLoader();
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+            sunLight.position.set(50, 0, 50);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            scene.add(sunLight);
+
+            const fillLight = new THREE.DirectionalLight(0x3a5f7d, 0.4);
+            fillLight.position.set(-50, 0, -50);
+            scene.add(fillLight);
+
+            // Create starfield
+            createStarfield();
+
+            // Create realistic Earth with NASA textures - made larger
+            createPhotoRealisticEarth();
+
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            document.getElementById('rotateBtn').addEventListener('click', toggleRotation);
+            document.getElementById('resetBtn').addEventListener('click', resetCamera);
+            document.getElementById('orbitsBtn').addEventListener('click', switchToSolarSystemView);
+
+            // Start animation
+            animate();
+        }
+
+        function createStarfield() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.7,
+                transparent: true,
+                opacity: 0.9
+            });
+
+            const starsVertices = [];
+            for (let i = 0; i < 8000; i++) {
+                const x = (Math.random() - 0.5) * 600;
+                const y = (Math.random() - 0.5) * 600;
+                const z = (Math.random() - 0.5) * 600;
+                starsVertices.push(x, y, z);
+            }
+
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const starField = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(starField);
+        }
+
+        function createPhotoRealisticEarth() {
+            // Increased Earth size for larger background
+            const earthGeometry = new THREE.SphereGeometry(20, 128, 128);
+
+            const earthTexture = textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg',
+                () => {
+                    setTimeout(() => {
+                        document.getElementById('loading').classList.add('hidden');
+                    }, 500);
+                }
+            );
+
+            const bumpTexture = textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_normal_2048.jpg'
+            );
+
+            const specularTexture = textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_specular_2048.jpg'
+            );
+
+            const earthMaterial = new THREE.MeshPhongMaterial({
+                map: earthTexture,
+                bumpMap: bumpTexture,
+                bumpScale: 0.5,
+                specularMap: specularTexture,
+                specular: new THREE.Color(0x555555),
+                shininess: 15,
+                color: new THREE.Color(0x7a9d88),
+                emissive: new THREE.Color(0x001a33),
+                emissiveIntensity: 0.2
+            });
+
+            earth = new THREE.Mesh(earthGeometry, earthMaterial);
+            earth.castShadow = true;
+            earth.receiveShadow = true;
+            scene.add(earth);
+
+            // Clouds - scaled to match larger Earth
+            const cloudsGeometry = new THREE.SphereGeometry(20.15, 128, 128);
+            const cloudsTexture = textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_clouds_1024.png'
+            );
+
+            const cloudsMaterial = new THREE.MeshPhongMaterial({
+                map: cloudsTexture,
+                transparent: true,
+                opacity: 0.3,
+                depthWrite: false
+            });
+
+            earthClouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
+            scene.add(earthClouds);
+
+            // Atmosphere - scaled to match larger Earth
+            const atmosphereGeometry = new THREE.SphereGeometry(21.2, 128, 128);
+            const atmosphereMaterial = new THREE.ShaderMaterial({
+                transparent: true,
+                side: THREE.BackSide,
+                uniforms: {
+                    c: { value: 0.3 },
+                    p: { value: 3.5 }
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float c;
+                    uniform float p;
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(c - dot(vNormal, vec3(0.0, 0.0, 1.0)), p);
+                        gl_FragColor = vec4(0.1, 0.3, 0.65, 1.0) * intensity;
+                    }
+                `
+            });
+
+            earthAtmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            scene.add(earthAtmosphere);
+
+            // Inner glow - scaled to match larger Earth
+            const innerGlowGeometry = new THREE.SphereGeometry(20.6, 128, 128);
+            const innerGlowMaterial = new THREE.ShaderMaterial({
+                transparent: true,
+                side: THREE.FrontSide,
+                uniforms: {
+                    c: { value: 0.2 },
+                    p: { value: 6.0 }
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float c;
+                    uniform float p;
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(c + dot(vNormal, vec3(0, 0, 1.0)), p);
+                        gl_FragColor = vec4(0.1, 0.3, 0.65, 0.1) * intensity;
+                    }
+                `
+            });
+
+            const innerGlow = new THREE.Mesh(innerGlowGeometry, innerGlowMaterial);
+            scene.add(innerGlow);
+        }
+
+        function switchToSolarSystemView() {
+            if (earth) {
+                scene.remove(earth);
+                scene.remove(earthClouds);
+                scene.remove(earthAtmosphere);
+                earth = null;
+            }
+
+            const objectsToRemove = [];
+            scene.traverse(obj => {
+                if (obj.isMesh && obj.material && obj.material.type === 'ShaderMaterial') {
+                    objectsToRemove.push(obj);
+                }
+            });
+            objectsToRemove.forEach(obj => scene.remove(obj));
+
+            createSun();
+            createPlanet(6, 0xc4c4c4, 15, 0.008, 'Mercury');
+            createPlanet(8, 0xe5e5e5, 22, 0.006, 'Venus');
+            createPlanet(8.5, 0xd4d4d4, 30, 0.005, 'Earth');
+            createPlanet(7, 0xcccccc, 40, 0.004, 'Mars');
+            createPlanet(15, 0xe8e8e8, 65, 0.002, 'Jupiter');
+            createPlanet(13, 0xf0f0f0, 85, 0.0015, 'Saturn');
+            createAsteroidBelt();
+
+            camera.position.set(0, 40, 70);
+            controls.autoRotate = true;
+        }
+
+        function createSun() {
+            const sunGeometry = new THREE.SphereGeometry(5, 64, 64);
+            const sunMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                emissive: 0xffffff,
+                emissiveIntensity: 1
+            });
+            sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            scene.add(sun);
+
+            for (let i = 1; i <= 3; i++) {
+                const glowSize = 5 + i * 1.5;
+                const glowOpacity = 0.15 / i;
+                const glowGeometry = new THREE.SphereGeometry(glowSize, 32, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: glowOpacity,
+                    side: THREE.BackSide
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                scene.add(glow);
+            }
+        }
+
+        function createPlanet(size, color, distance, speed, name) {
+            const geometry = new THREE.SphereGeometry(size / 10, 32, 32);
+            const material = new THREE.MeshStandardMaterial({
+                color: color,
+                metalness: 0.3,
+                roughness: 0.7,
+                emissive: color,
+                emissiveIntensity: 0.05
+            });
+            const planet = new THREE.Mesh(geometry, material);
+            planet.castShadow = true;
+            planet.receiveShadow = true;
+            planet.position.x = distance;
+
+            const orbit = new THREE.Group();
+            orbit.add(planet);
+
+            const orbitCurve = new THREE.EllipseCurve(0, 0, distance, distance, 0, 2 * Math.PI, false, 0);
+            const points = orbitCurve.getPoints(100);
+            const orbitGeometry = new THREE.BufferGeometry().setFromPoints(points);
+            const orbitMaterial = new THREE.LineBasicMaterial({
+                color: 0x333333,
+                transparent: true,
+                opacity: 0.3
+            });
+            const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+            orbitLine.rotation.x = Math.PI / 2;
+            orbit.add(orbitLine);
+
+            scene.add(orbit);
+            planets.push({ orbit, planet, distance, speed, name });
+        }
+
+        function createAsteroidBelt() {
+            const asteroidCount = 300;
+            const innerRadius = 48;
+            const outerRadius = 58;
+
+            for (let i = 0; i < asteroidCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
+                
+                const size = Math.random() * 0.15 + 0.05;
+                const geometry = new THREE.DodecahedronGeometry(size, 0);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x888888,
+                    metalness: 0.5,
+                    roughness: 0.8
+                });
+                
+                const asteroid = new THREE.Mesh(geometry, material);
+                asteroid.position.x = Math.cos(angle) * radius;
+                asteroid.position.z = Math.sin(angle) * radius;
+                asteroid.position.y = (Math.random() - 0.5) * 3;
+                
+                asteroid.rotation.x = Math.random() * Math.PI;
+                asteroid.rotation.y = Math.random() * Math.PI;
+                
+                scene.add(asteroid);
+                asteroids.push({
+                    mesh: asteroid,
+                    rotationSpeed: {
+                        x: (Math.random() - 0.5) * 0.02,
+                        y: (Math.random() - 0.5) * 0.02,
+                        z: (Math.random() - 0.5) * 0.02
+                    },
+                    orbitSpeed: 0.001 + Math.random() * 0.002,
+                    angle: angle,
+                    radius: radius
+                });
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (earth) {
+                earth.rotation.y += 0.001;
+                if (earthClouds) {
+                    earthClouds.rotation.y += 0.0012;
+                }
+            }
+
+            if (sun) {
+                sun.rotation.y += 0.001;
+            }
+
+            planets.forEach(p => {
+                p.orbit.rotation.y += p.speed;
+                p.planet.rotation.y += 0.01;
+            });
+
+            asteroids.forEach(a => {
+                a.mesh.rotation.x += a.rotationSpeed.x;
+                a.mesh.rotation.y += a.rotationSpeed.y;
+                a.mesh.rotation.z += a.rotationSpeed.z;
+                
+                a.angle += a.orbitSpeed;
+                a.mesh.position.x = Math.cos(a.angle) * a.radius;
+                a.mesh.position.z = Math.sin(a.angle) * a.radius;
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function toggleRotation() {
+            autoRotate = !autoRotate;
+            controls.autoRotate = autoRotate;
+            
+            // Update button appearance
+            const btn = document.getElementById('rotateBtn');
+            if (autoRotate) {
+                btn.classList.add('bg-white', 'text-black');
+                btn.classList.remove('bg-gray-900/50', 'text-white');
+            } else {
+                btn.classList.remove('bg-white', 'text-black');
+                btn.classList.add('bg-gray-900/50', 'text-white');
+            }
+        }
+
+        function resetCamera() {
+            if (earth && !sun) {
+                camera.position.set(0, 0, 40); // Reset to Earth view
+            } else {
+                camera.position.set(0, 40, 70); // Reset to solar system view
+            }
+            camera.lookAt(0, 0, 0);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        }
+
+        // Export functions for global use
+        window.toggleRotation = toggleRotation;
+        window.resetCamera = resetCamera;
+        window.switchToSolarSystemView = switchToSolarSystemView;
+    </script>
+
+    <script>
+        // Backend API Configuration
+        const BACKEND_API = 'http://localhost:8002';
+        
+        // Global asteroid data
+        let asteroidData = [];
+        let heatmap = null;
+        let map = null;
+        
+        // Navigation state
+        let currentPage = 'home';
+        
+        // Dashboard update interval
+        let dashboardInterval = null;
+        
+        // Authentication state
+        let isLoggedIn = false;
+        let currentUser = null;
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Stellar Observatory Frontend Initialized');
+            console.log('🔗 Backend API:', BACKEND_API);
+            
+            // Check if user is already logged in
+            checkLoginStatus();
+            
+            // Load initial data
+            await loadObservatoryMetrics();
+            await fetchRealAsteroids();
+            
+            // Set up AI assistant
+            setupAIAssistant();
+            
+            // Set up contact form
+            setupContactForm();
+            
+            // Set up login form
+            setupLoginForm();
+            
+            // Populate asteroid dropdown for risk analyzer
+            setTimeout(populateAsteroidDropdown, 1000);
+            
+            // Initialize real-time updates
+            startRealTimeUpdates();
+        });
+        
+        // Check login status from localStorage
+        function checkLoginStatus() {
+            const savedUser = localStorage.getItem('stellarObservatoryUser');
+            if (savedUser) {
+                try {
+                    const user = JSON.parse(savedUser);
+                    if (user.username && user.loginTime) {
+                        // Check if login is still valid (24 hours)
+                        const loginTime = new Date(user.loginTime);
+                        const currentTime = new Date();
+                        const hoursDiff = (currentTime - loginTime) / (1000 * 60 * 60);
+                        
+                        if (hoursDiff < 24) {
+                            isLoggedIn = true;
+                            currentUser = user;
+                            updateLoginUI();
+                        } else {
+                            localStorage.removeItem('stellarObservatoryUser');
+                        }
+                    }
+                } catch (e) {
+                    localStorage.removeItem('stellarObservatoryUser');
+                }
+            }
+        }
+        
+        // Update login UI
+        function updateLoginUI() {
+            const loginNavItem = document.getElementById('loginNavItem');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (isLoggedIn && currentUser) {
+                loginNavItem.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm text-gray-300">Welcome, ${currentUser.username}</span>
+                        <button onclick="logout()" class="logout-btn-nav">
+                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                        </button>
+                    </div>
+                `;
+                
+                // Update mobile menu
+                const mobileLoginBtn = mobileMenu.querySelector('button[onclick="showLogin()"]');
+                if (mobileLoginBtn) {
+                    mobileLoginBtn.innerHTML = `
+                        <div class="flex items-center justify-between w-full">
+                            <span>Welcome, ${currentUser.username}</span>
+                            <button onclick="logout()" class="text-red-500 hover:text-red-400">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                    mobileLoginBtn.onclick = () => logout();
+                }
+                
+                // Hide login modal if open
+                hideLogin();
+            } else {
+                loginNavItem.innerHTML = `
+                    <button onclick="showLogin()" class="login-btn-nav">
+                        <i class="fas fa-sign-in-alt mr-2"></i> Login
+                    </button>
+                `;
+                
+                // Reset mobile menu
+                const mobileLoginBtn = mobileMenu.querySelector('button[onclick="logout()"]');
+                if (mobileLoginBtn) {
+                    mobileLoginBtn.innerHTML = `
+                        <i class="fas fa-sign-in-alt mr-2"></i> Login
+                    `;
+                    mobileLoginBtn.onclick = () => showLogin();
+                }
+            }
+        }
+        
+        // Show login modal
+        function showLogin() {
+            document.getElementById('loginModal').classList.add('active');
+            document.getElementById('username').focus();
+        }
+        
+        // Hide login modal
+        function hideLogin() {
+            document.getElementById('loginModal').classList.remove('active');
+            document.getElementById('loginForm').reset();
+            document.getElementById('loginError').classList.remove('show');
+        }
+        
+        // Setup login form
+        function setupLoginForm() {
+            const loginForm = document.getElementById('loginForm');
+            const loginError = document.getElementById('loginError');
+            
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value.trim();
+                
+                // Simple authentication (no backend required)
+                if (authenticateUser(username, password)) {
+                    // Login successful
+                    isLoggedIn = true;
+                    currentUser = {
+                        username: username,
+                        loginTime: new Date().toISOString()
+                    };
+                    
+                    // Save to localStorage
+                    localStorage.setItem('stellarObservatoryUser', JSON.stringify(currentUser));
+                    
+                    // Update UI
+                    updateLoginUI();
+                    
+                    // Hide login modal
+                    hideLogin();
+                    
+                    // Show welcome message
+                    showToast(`Welcome back, ${username}! Access granted to observatory systems.`);
+                    
+                } else {
+                    // Login failed
+                    loginError.classList.add('show');
+                    setTimeout(() => {
+                        loginError.classList.remove('show');
+                    }, 3000);
+                }
+            });
+        }
+        
+        // Simple authentication function
+        function authenticateUser(username, password) {
+            // Demo credentials
+            const validCredentials = [
+                { username: 'admin', password: 'observatory123' },
+                { username: 'scientist', password: 'research2025' },
+                { username: 'observer', password: 'telescope456' },
+                { username: 'guest', password: 'stargazer789' }
+            ];
+            
+            return validCredentials.some(cred => 
+                cred.username === username && cred.password === password
+            );
+        }
+        
+        // Logout function
+        function logout() {
+            isLoggedIn = false;
+            currentUser = null;
+            localStorage.removeItem('stellarObservatoryUser');
+            updateLoginUI();
+            showToast('Logged out successfully. Thank you for visiting!');
+        }
+        
+        // Show toast notification
+        function showToast(message) {
+            // Remove existing toast
+            const existingToast = document.querySelector('.toast-notification');
+            if (existingToast) {
+                existingToast.remove();
+            }
+            
+            // Create toast
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification fixed bottom-24 right-6 bg-gray-900/90 backdrop-blur-md border border-gray-800 text-white px-6 py-3 rounded-lg shadow-xl z-50 transform transition-all duration-300 translate-y-4 opacity-0';
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 10);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-y-4', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+        
+        // Navigation function
+        function navigateTo(page) {
+            // Check if login is required for protected pages
+            const protectedPages = ['dashboard', 'tracking', 'research', 'heatmap'];
+            if (protectedPages.includes(page) && !isLoggedIn) {
+                showLogin();
+                showToast('Please login to access this feature.');
+                return;
+            }
+            
+            // Hide current page
+            const currentPageElement = document.getElementById(`${currentPage}-page`);
+            if (currentPageElement) {
+                currentPageElement.classList.remove('active');
+                setTimeout(() => {
+                    currentPageElement.classList.add('hidden');
+                }, 300);
+            }
+            
+            // Update nav links
+            document.querySelectorAll('.nav-link, .nav-link-mobile').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show new page
+            const newPageElement = document.getElementById(`${page}-page`);
+            if (newPageElement) {
+                newPageElement.classList.remove('hidden');
+                setTimeout(() => {
+                    newPageElement.classList.add('active');
+                }, 50);
+                
+                // Update current page
+                currentPage = page;
+                
+                // Update active nav link
+                const pageNames = {
+                    'home': 'Home',
+                    'dashboard': 'Dashboard',
+                    'observatory': 'Observatory',
+                    'tracking': 'Tracking',
+                    'heatmap': 'Heatmap',
+                    'research': 'Research',
+                    'contact': 'Contact'
+                };
+                
+                document.querySelectorAll('.nav-link, .nav-link-mobile').forEach(link => {
+                    if (link.textContent.trim().toUpperCase() === pageNames[page].toUpperCase()) {
+                        link.classList.add('active');
+                    }
+                });
+                
+                // Close mobile menu if open
+                document.getElementById('mobileMenu').classList.add('hidden');
+                
+                // Load data for specific pages
+                if (page === 'observatory') {
+                    loadObservatoryMetrics();
+                } else if (page === 'dashboard') {
+                    initDashboard();
+                } else if (page === 'tracking') {
+                    fetchRealAsteroids();
+                } else if (page === 'heatmap') {
+                    initHeatmap();
+                } else if (page === 'research') {
+                    populateAsteroidDropdown();
+                }
+            }
+        }
+        
+        // Mobile menu toggle
+        function toggleMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+        
+        // Filter tracking items
+        function filterTracking(type) {
+            // Check login for tracking
+            if (!isLoggedIn) {
+                showLogin();
+                showToast('Please login to access tracking features.');
+                return;
+            }
+            
+            const items = document.querySelectorAll('.feed-item');
+            const buttons = document.querySelectorAll('.filter-btn');
+            
+            buttons.forEach(btn => btn.classList.remove('active', 'bg-white', 'text-black'));
+            event.target.classList.add('active', 'bg-white', 'text-black');
+            
+            items.forEach(item => {
+                if (type === 'all') {
+                    item.classList.remove('hidden');
+                } else {
+                    const itemTypes = item.getAttribute('data-type');
+                    if (itemTypes && itemTypes.includes(type)) {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                }
+            });
+        }
+        
+        // Start real-time updates
+        function startRealTimeUpdates() {
+            // Update dashboard every 10 seconds
+            if (dashboardInterval) {
+                clearInterval(dashboardInterval);
+            }
+            
+            dashboardInterval = setInterval(() => {
+                if (currentPage === 'dashboard') {
+                    updateDashboard();
+                }
+                if (currentPage === 'heatmap') {
+                    updateHeatmap();
+                }
+                updateTimeStamps();
+            }, 10000);
+            
+            // Initial update
+            updateTimeStamps();
+        }
+        
+        // Update all timestamps
+        function updateTimeStamps() {
+            const now = new Date();
+            const timeString = now.toUTCString().split(' ')[4];
+            
+            // Update dashboard timestamp
+            const dashboardTime = document.getElementById('dashboard-update-time');
+            if (dashboardTime) dashboardTime.textContent = timeString;
+            
+            // Update heatmap timestamp
+            const heatmapTime = document.getElementById('heatmap-update-time');
+            if (heatmapTime) heatmapTime.textContent = timeString;
+        }
+        
+        // Initialize Dashboard
+        function initDashboard() {
+            updateDashboard();
+            populateRecentEvents();
+        }
+        
+        // Update Dashboard
+        async function updateDashboard() {
+            try {
+                // Update metrics
+                updateDashboardMetrics();
+                
+                // Update live data stream
+                updateLiveDataStream();
+                
+                // Update timestamp
+                updateTimeStamps();
+                
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+            }
+        }
+        
+        // Refresh Dashboard
+        function refreshDashboard() {
+            updateDashboard();
+            
+            // Show refresh feedback
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check mr-2"></i> Updated';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 2000);
+        }
+        
+        // Update dashboard metrics
+        function updateDashboardMetrics() {
+            // Simulate data updates
+            const metrics = {
+                neoCount: Math.floor(240 + Math.random() * 20),
+                safetyIndex: (97 + Math.random() * 3).toFixed(1) + '%',
+                closestApproach: (0.3 + Math.random() * 0.4).toFixed(2) + ' LD',
+                activeThreats: Math.floor(1 + Math.random() * 3),
+                dataRate: (2.3 + Math.random() * 0.3).toFixed(1) + 'M/sec',
+                responseTime: (98 + Math.random() * 2).toFixed(1) + '%'
+            };
+            
+            // Update observatory metrics if on that page
+            if (currentPage === 'observatory') {
+                document.getElementById('neo-count').textContent = metrics.neoCount;
+                document.getElementById('safety-index').textContent = metrics.safetyIndex;
+                document.getElementById('closest-approach').textContent = metrics.closestApproach;
+                document.getElementById('risk-assessment').textContent = metrics.activeThreats > 2 ? 'MEDIUM' : 'LOW';
+                document.getElementById('data-points').textContent = '2.4M';
+            }
+        }
+        
+        // Update live data stream
+        function updateLiveDataStream() {
+            const stream = document.getElementById('live-data-stream');
+            if (!stream) return;
+            
+            // Create new data item
+            const events = [
+                'Trajectory confirmation completed',
+                'New asteroid detected and cataloged',
+                'Orbit calculation updated',
+                'Risk assessment algorithm running',
+                'Telescope network synchronized',
+                'Data backup completed',
+                'AI analysis in progress',
+                'Weather conditions optimal'
+            ];
+            
+            const randomEvent = events[Math.floor(Math.random() * events.length)];
+            
+            // Create new data item
+            const newItem = document.createElement('div');
+            newItem.className = 'data-item';
+            newItem.innerHTML = `
+                <div class="flex justify-between">
+                    <span class="text-sm">${randomEvent}</span>
+                    <span class="text-xs text-gray-400">Now</span>
+                </div>
+                <div class="text-xs text-gray-400">System update - ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+            `;
+            
+            // Add to top of stream
+            stream.insertBefore(newItem, stream.firstChild);
+            
+            // Limit to 10 items
+            while (stream.children.length > 10) {
+                stream.removeChild(stream.lastChild);
+            }
+        }
+        
+        // Populate recent events
+        function populateRecentEvents() {
+            const eventsTable = document.getElementById('recent-events');
+            if (!eventsTable) return;
+            
+            const events = [
+                { time: '15:30 UTC', event: 'Asteroid Detection', object: '2025 PK9', severity: 'High', status: 'Monitoring' },
+                { time: '14:45 UTC', event: 'Trajectory Update', object: '2024 BX1', severity: 'Medium', status: 'Confirmed' },
+                { time: '13:20 UTC', event: 'System Maintenance', object: 'N/A', severity: 'Info', status: 'Completed' },
+                { time: '11:55 UTC', event: 'Risk Assessment', object: 'C/2023 A3', severity: 'Low', status: 'Completed' },
+                { time: '09:30 UTC', event: 'Data Sync', object: 'Network', severity: 'Info', status: 'Successful' },
+                { time: '07:15 UTC', event: 'Weather Alert', object: 'Telescope 42', severity: 'Warning', status: 'Resolved' }
+            ];
+            
+            eventsTable.innerHTML = '';
+            
+            events.forEach(event => {
+                let severityClass = '';
+                switch(event.severity) {
+                    case 'High': severityClass = 'text-red-500'; break;
+                    case 'Medium': severityClass = 'text-yellow-500'; break;
+                    case 'Low': severityClass = 'text-green-500'; break;
+                    default: severityClass = 'text-blue-500';
+                }
+                
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-800 hover:bg-gray-900/50';
+                row.innerHTML = `
+                    <td class="py-4 px-4">
+                        <div class="mono-font text-sm">${event.time}</div>
+                    </td>
+                    <td class="py-4 px-4">
+                        <div class="font-medium">${event.event}</div>
+                    </td>
+                    <td class="py-4 px-4">
+                        <div>${event.object}</div>
+                    </td>
+                    <td class="py-4 px-4">
+                        <span class="${severityClass} font-semibold">${event.severity}</span>
+                    </td>
+                    <td class="py-4 px-4">
+                        <span class="text-green-500">${event.status}</span>
+                    </td>
+                `;
+                
+                eventsTable.appendChild(row);
+            });
+        }
+        
+        // Initialize Heatmap
+        function initHeatmap() {
+            if (!map) {
+                // Initialize map
+                map = L.map('heatmap').setView([20, 0], 2);
+                
+                // Add dark tile layer
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '©OpenStreetMap, ©CartoDB',
+                    subdomains: 'abcd',
+                    maxZoom: 18
+                }).addTo(map);
+                
+                // Add custom legend
+                const legend = L.control({position: 'bottomright'});
+                legend.onAdd = function() {
+                    const div = L.DomUtil.create('div', 'heatmap-legend');
+                    div.innerHTML = `
+                        <h4 class="font-bold mb-2">Risk Levels</h4>
+                        <div class="flex items-center mb-1">
+                            <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                            <span class="text-xs">Low (0.1-0.5 LD)</span>
+                        </div>
+                        <div class="flex items-center mb-1">
+                            <div class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
+                            <span class="text-xs">Medium (0.05-0.1 LD)</span>
+                        </div>
+                        <div class="flex items-center mb-1">
+                            <div class="w-3 h-3 rounded-full bg-orange-500 mr-2"></div>
+                            <span class="text-xs">High (0.01-0.05 LD)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                            <span class="text-xs">Critical (<0.01 LD)</span>
+                        </div>
+                    `;
+                    return div;
+                };
+                legend.addTo(map);
+            }
+            
+            // Generate heatmap data
+            generateHeatmapData();
+            
+            // Update timestamp
+            updateTimeStamps();
+        }
+        
+        // Generate heatmap data with proper risk levels
+        function generateHeatmapData() {
+            if (!map) return;
+            
+            // Clear existing markers
+            map.eachLayer((layer) => {
+                if (layer instanceof L.CircleMarker) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            // Generate sample data with proper risk levels
+            const locations = [
+                // Low Risk (0.1-0.5 LD)
+                { lat: 40.7128, lng: -74.0060, distance: 0.42, name: 'New York', risk: 'low' },
+                { lat: 34.0522, lng: -118.2437, distance: 0.35, name: 'Los Angeles', risk: 'low' },
+                { lat: 51.5074, lng: -0.1278, distance: 0.48, name: 'London', risk: 'low' },
+                { lat: 48.8566, lng: 2.3522, distance: 0.29, name: 'Paris', risk: 'low' },
+                { lat: 35.6762, lng: 139.6503, distance: 0.41, name: 'Tokyo', risk: 'low' },
+                
+                // Medium Risk (0.05-0.1 LD)
+                { lat: 55.7558, lng: 37.6173, distance: 0.089, name: 'Moscow', risk: 'medium' },
+                { lat: 39.9042, lng: 116.4074, distance: 0.067, name: 'Beijing', risk: 'medium' },
+                { lat: 28.6139, lng: 77.2090, distance: 0.095, name: 'New Delhi', risk: 'medium' },
+                { lat: -33.8688, lng: 151.2093, distance: 0.078, name: 'Sydney', risk: 'medium' },
+                
+                // High Risk (0.01-0.05 LD)
+                { lat: -22.9068, lng: -43.1729, distance: 0.032, name: 'Rio de Janeiro', risk: 'high' },
+                { lat: 41.9028, lng: 12.4964, distance: 0.045, name: 'Rome', risk: 'high' },
+                { lat: 30.0444, lng: 31.2357, distance: 0.028, name: 'Cairo', risk: 'high' },
+                
+                // Critical Risk (<0.01 LD)
+                { lat: 19.4326, lng: -99.1332, distance: 0.008, name: 'Mexico City', risk: 'critical' },
+                { lat: -34.6037, lng: -58.3816, distance: 0.006, name: 'Buenos Aires', risk: 'critical' }
+            ];
+            
+            // Add markers with appropriate colors
+            locations.forEach(location => {
+                let color, radius;
+                
+                switch(location.risk) {
+                    case 'low':
+                        color = '#10b981';
+                        radius = 15;
+                        break;
+                    case 'medium':
+                        color = '#f59e0b';
+                        radius = 20;
+                        break;
+                    case 'high':
+                        color = '#ef4444';
+                        radius = 25;
+                        break;
+                    case 'critical':
+                        color = '#dc2626';
+                        radius = 30;
+                        break;
+                }
+                
+                // Create circle marker
+                const circle = L.circleMarker([location.lat, location.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.6,
+                    radius: radius
+                }).addTo(map);
+                
+                // Add popup
+                circle.bindPopup(`
+                    <div class="text-black">
+                        <strong>${location.name}</strong><br>
+                        Distance: ${location.distance} LD<br>
+                        Risk Level: ${location.risk.toUpperCase()}<br>
+                        Status: ${getRiskStatus(location.risk)}
+                    </div>
+                `);
+            });
+        }
+        
+        // Get risk status text
+        function getRiskStatus(riskLevel) {
+            switch(riskLevel) {
+                case 'low': return 'Monitoring';
+                case 'medium': return 'Enhanced Tracking';
+                case 'high': return 'High Priority';
+                case 'critical': return 'Immediate Action';
+                default: return 'Unknown';
+            }
+        }
+        
+        // Update Heatmap
+        function updateHeatmap() {
+            generateHeatmapData();
+            updateTimeStamps();
+        }
+        
+        // Refresh Heatmap
+        function refreshHeatmap() {
+            updateHeatmap();
+            
+            // Show refresh feedback
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check mr-2"></i> Updated';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 2000);
+        }
+        
+        // Load observatory metrics from backend
+        async function loadObservatoryMetrics() {
+            try {
+                // Test backend connection
+                const testResponse = await fetch(`${BACKEND_API}/test`);
+                if (!testResponse.ok) {
+                    throw new Error('Backend server not responding');
+                }
+                
+                console.log('✅ Backend server is running');
+                
+                // Update metrics with simulation data
+                document.getElementById('neo-count').textContent = '247';
+                document.getElementById('safety-index').textContent = '98.7%';
+                document.getElementById('closest-approach').textContent = '0.42 LD';
+                document.getElementById('risk-assessment').textContent = 'LOW';
+                document.getElementById('telescope-count').textContent = '42';
+                document.getElementById('data-points').textContent = '2.4M';
+                
+            } catch (error) {
+                console.error('Error connecting to backend:', error);
+                // Fallback to static data
+                document.getElementById('neo-count').textContent = '247';
+                document.getElementById('safety-index').textContent = '98.7%';
+                document.getElementById('closest-approach').textContent = '0.42 LD';
+                document.getElementById('risk-assessment').textContent = 'LOW';
+                document.getElementById('telescope-count').textContent = '42';
+                document.getElementById('data-points').textContent = '2.4M';
+            }
+        }
+        
+        // Fetch real asteroids from backend
+        async function fetchRealAsteroids() {
+            // Check login for tracking
+            if (!isLoggedIn) {
+                showLogin();
+                showToast('Please login to access asteroid tracking.');
+                return;
+            }
+            
+            const feed = document.getElementById('tracking-feed');
+            feed.innerHTML = '<div class="bg-black p-8 text-center"><div class="loading-spinner mx-auto mb-4"></div><p class="text-gray-400">Loading asteroid data...</p></div>';
+            
+            try {
+                // Try to fetch from backend
+                const response = await fetch(`${BACKEND_API}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: "List 5 near-Earth asteroids with their distances and risk levels" 
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Backend response:', data);
+                    
+                    // Simulate asteroid data
+                    loadSimulationAsteroids();
+                    
+                } else {
+                    throw new Error('Backend not available');
+                }
+                
+            } catch (error) {
+                console.error('Error fetching asteroids:', error);
+                // Use simulation data
+                loadSimulationAsteroids();
+            }
+        }
+        
+        // Load simulation asteroids as fallback
+        function loadSimulationAsteroids() {
+            const feed = document.getElementById('tracking-feed');
+            const simulationAsteroids = [
+                {
+                    name: '2024 BX1',
+                    description: 'Small near-Earth asteroid approximately 50-110m in diameter with stable trajectory',
+                    distance: '0.42',
+                    status: 'Safe',
+                    isHazardous: false
+                },
+                {
+                    name: 'C/2023 A3',
+                    description: 'Long-period comet with highly elliptical orbit approaching inner solar system',
+                    distance: '2.1',
+                    status: 'Safe',
+                    isHazardous: false
+                },
+                {
+                    name: '2025 PK9',
+                    description: 'Potentially hazardous asteroid under enhanced monitoring and observation',
+                    distance: '0.89',
+                    status: 'Monitoring',
+                    isHazardous: true
+                },
+                {
+                    name: '2024 MK',
+                    description: 'Recently discovered NEO with close approach predicted for next month',
+                    distance: '1.2',
+                    status: 'Safe',
+                    isHazardous: false
+                },
+                {
+                    name: '99942 Apophis',
+                    description: 'Famous potentially hazardous asteroid, close approach in 2029',
+                    distance: '5.6',
+                    status: 'Monitoring',
+                    isHazardous: true
+                }
+            ];
+            
+            feed.innerHTML = '';
+            
+            // Store asteroid data for risk analyzer
+            asteroidData = simulationAsteroids.map((asteroid, index) => ({
+                id: `sim-${index}`,
+                name: asteroid.name,
+                is_potentially_hazardous_asteroid: asteroid.isHazardous,
+                estimated_diameter: { meters: { estimated_diameter_max: 50 + Math.random() * 200 } },
+                close_approach_data: {
+                    miss_distance: { kilometers: parseFloat(asteroid.distance) * 384400 },
+                    relative_velocity: { kilometers_per_hour: 10000 + Math.random() * 40000 }
+                }
+            }));
+            
+            simulationAsteroids.forEach((asteroid, index) => {
+                const isHazardous = asteroid.isHazardous;
+                const types = isHazardous ? 'hazardous' : '';
+                
+                const asteroidHTML = `
+                    <div class="feed-item bg-black p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center" data-type="${types}">
+                        <div class="mono-font text-gray-500">${(index + 1).toString().padStart(2, '0')}</div>
+                        <div class="lg:col-span-2">
+                            <h3 class="text-xl font-semibold mb-2">${asteroid.name}</h3>
+                            <p class="text-gray-400">
+                                ${isHazardous ? '⚠️ Potentially Hazardous ' : ''}
+                                ${asteroid.description}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <div class="mono-font text-2xl font-bold mb-1">${asteroid.distance} LD</div>
+                            <div class="${asteroid.status === 'Monitoring' ? 'text-yellow-500' : 'text-green-500'} text-xs uppercase tracking-widest font-semibold">${asteroid.status}</div>
+                        </div>
+                    </div>
+                `;
+                
+                feed.innerHTML += asteroidHTML;
+            });
+            
+            // Add status message
+            const statusHTML = `
+                <div class="bg-gray-900/30 border border-gray-800 p-4 mt-4">
+                    <p class="text-gray-400 text-sm">📡 Using simulated asteroid data. Make sure to run <code>node ai-server.js</code> for AI features.</p>
+                </div>
+            `;
+            feed.innerHTML += statusHTML;
+        }
+        
+        // Populate asteroid dropdown for risk analyzer
+        async function populateAsteroidDropdown() {
+            const select = document.getElementById('asteroid-select');
+            
+            try {
+                // Clear existing options except the first one
+                while (select.options.length > 1) {
+                    select.remove(1);
+                }
+                
+                // Add asteroid options from simulation data
+                const asteroids = [
+                    { name: '2024 BX1', distance: '0.42 LD', hazardous: false },
+                    { name: '2025 PK9', distance: '0.89 LD', hazardous: true },
+                    { name: 'C/2023 A3', distance: '2.1 LD', hazardous: false },
+                    { name: '99942 Apophis', distance: '5.6 LD', hazardous: true },
+                    { name: '2024 MK', distance: '1.2 LD', hazardous: false }
+                ];
+                
+                asteroids.forEach(asteroid => {
+                    const option = document.createElement('option');
+                    option.value = asteroid.name;
+                    option.textContent = `${asteroid.name} - ${asteroid.hazardous ? '⚠️ ' : ''}${asteroid.distance}`;
+                    select.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error populating asteroid dropdown:', error);
+            }
+        }
+        
+        // Analyze selected asteroid
+        async function analyzeSelectedAsteroid() {
+            // Check login for research features
+            if (!isLoggedIn) {
+                showLogin();
+                showToast('Please login to access risk analysis features.');
+                return;
+            }
+            
+            const select = document.getElementById('asteroid-select');
+            const selectedValue = select.value;
+            
+            if (!selectedValue) {
+                alert('Please select an asteroid to analyze.');
+                return;
+            }
+            
+            try {
+                // Show loading
+                const resultDiv = document.getElementById('risk-analysis-result');
+                resultDiv.classList.remove('hidden');
+                resultDiv.innerHTML = '<div class="text-center py-8"><div class="loading-spinner mx-auto mb-4"></div><p class="text-gray-400">Analyzing asteroid risk...</p></div>';
+                
+                // Find asteroid in simulation data
+                let asteroid = asteroidData.find(a => a.name === selectedValue);
+                
+                // If not found, create simulation data
+                if (!asteroid) {
+                    asteroid = {
+                        name: selectedValue,
+                        is_potentially_hazardous_asteroid: selectedValue.includes('PK9') || selectedValue.includes('Apophis'),
+                        estimated_diameter: { meters: { estimated_diameter_max: 50 + Math.random() * 300 } },
+                        close_approach_data: {
+                            miss_distance: { kilometers: 100000 + Math.random() * 2000000 },
+                            relative_velocity: { kilometers_per_hour: 15000 + Math.random() * 35000 }
+                        }
+                    };
+                }
+                
+                // Calculate risk score with improved algorithm
+                const riskScore = calculateAccurateRiskScore(asteroid);
+                
+                // Display results
+                displayRiskAnalysis(asteroid, riskScore);
+                
+            } catch (error) {
+                console.error('Error analyzing asteroid:', error);
+                alert('Error analyzing asteroid. Please try again.');
+            }
+        }
+        
+        // ENHANCED: Calculate accurate risk score
+        function calculateAccurateRiskScore(asteroid) {
+            let score = 0;
+            
+            // Factor 1: Distance to Earth (35% weight) - MORE ACCURATE
+            const distanceKm = asteroid.close_approach_data?.miss_distance?.kilometers || 1000000;
+            const distanceLD = distanceKm / 384400; // Convert to Lunar Distances
+            
+            // Distance scoring: Closer = Higher risk (exponential scale)
+            let distanceScore;
+            if (distanceLD < 0.01) {
+                distanceScore = 100; // Critical: <0.01 LD
+            } else if (distanceLD < 0.05) {
+                distanceScore = 85 + (15 * (0.05 - distanceLD) / 0.04); // High: 0.01-0.05 LD
+            } else if (distanceLD < 0.1) {
+                distanceScore = 70 + (15 * (0.1 - distanceLD) / 0.05); // Medium: 0.05-0.1 LD
+            } else if (distanceLD < 0.5) {
+                distanceScore = 30 + (40 * (0.5 - distanceLD) / 0.4); // Low: 0.1-0.5 LD
+            } else {
+                distanceScore = 10 + (20 * (1 - Math.min(distanceLD, 5)) / 4.5); // Very low: >0.5 LD
+            }
+            
+            score += distanceScore * 0.35;
+            
+            // Factor 2: Size/Diameter (30% weight) - MORE ACCURATE
+            const sizeMeters = asteroid.estimated_diameter?.meters?.estimated_diameter_max || 50;
+            
+            // Size scoring: Larger = Higher risk (logarithmic scale)
+            let sizeScore;
+            if (sizeMeters > 1000) {
+                sizeScore = 100; // City-destroying
+            } else if (sizeMeters > 140) {
+                sizeScore = 85 + (15 * (sizeMeters - 140) / 860); // Regional destruction
+            } else if (sizeMeters > 50) {
+                sizeScore = 60 + (25 * (sizeMeters - 50) / 90); // Significant local damage
+            } else if (sizeMeters > 20) {
+                sizeScore = 30 + (30 * (sizeMeters - 20) / 30); // Local damage
+            } else {
+                sizeScore = 10 + (20 * sizeMeters / 20); // Minor damage
+            }
+            
+            score += sizeScore * 0.30;
+            
+            // Factor 3: Velocity (20% weight) - MORE ACCURATE
+            const velocityKmh = asteroid.close_approach_data?.relative_velocity?.kilometers_per_hour || 20000;
+            const velocityKmps = velocityKmh / 3600; // Convert to km/s
+            
+            // Velocity scoring: Faster = Higher risk (quadratic scale)
+            let velocityScore;
+            if (velocityKmps > 30) {
+                velocityScore = 100; // Extremely fast
+            } else if (velocityKmps > 20) {
+                velocityScore = 70 + (30 * (velocityKmps - 20) / 10);
+            } else if (velocityKmps > 15) {
+                velocityScore = 50 + (20 * (velocityKmps - 15) / 5);
+            } else if (velocityKmps > 10) {
+                velocityScore = 30 + (20 * (velocityKmps - 10) / 5);
+            } else {
+                velocityScore = 10 + (20 * velocityKmps / 10);
+            }
+            
+            score += velocityScore * 0.20;
+            
+            // Factor 4: Hazardous Status & Composition (15% weight)
+            let hazardScore = 0;
+            
+            // Potentially hazardous status
+            if (asteroid.is_potentially_hazardous_asteroid) {
+                hazardScore += 40;
+            }
+            
+            // Composition factor (simulated)
+            const compositionRisk = Math.random();
+            if (compositionRisk > 0.8) {
+                hazardScore += 30; // Metallic - higher impact energy
+            } else if (compositionRisk > 0.5) {
+                hazardScore += 20; // Rocky
+            } else {
+                hazardScore += 10; // Icy/C-type
+            }
+            
+            // Orbit uncertainty (simulated)
+            const uncertainty = Math.random();
+            hazardScore += uncertainty * 30;
+            
+            score += Math.min(hazardScore, 100) * 0.15;
+            
+            // Add random factor for orbital parameters (0-5 points)
+            const orbitalFactor = Math.random() * 5;
+            score += orbitalFactor;
+            
+            // Ensure score is between 0-100
+            return Math.min(100, Math.max(0, Math.round(score)));
+        }
+        
+        // Display risk analysis results
+        function displayRiskAnalysis(asteroid, riskScore) {
+            const resultDiv = document.getElementById('risk-analysis-result');
+            
+            // Determine risk level
+            let riskLevel, riskColor, meterClass, recommendation;
+            
+            if (riskScore <= 25) {
+                riskLevel = 'Low Risk';
+                riskColor = 'text-green-500';
+                meterClass = 'risk-low';
+                recommendation = 'No immediate action required. Continue routine monitoring. Low probability of significant impact.';
+            } else if (riskScore <= 50) {
+                riskLevel = 'Medium Risk';
+                riskColor = 'text-yellow-500';
+                meterClass = 'risk-medium';
+                recommendation = 'Enhanced monitoring recommended. Update trajectory predictions weekly. Maintain observation protocols.';
+            } else if (riskScore <= 75) {
+                riskLevel = 'High Risk';
+                riskColor = 'text-orange-500';
+                meterClass = 'risk-high';
+                recommendation = 'High priority tracking required. Consider deflection study preparations. Alert relevant space agencies.';
+            } else {
+                riskLevel = 'Critical Risk';
+                riskColor = 'text-red-500';
+                meterClass = 'risk-critical';
+                recommendation = 'IMMEDIATE ACTION REQUIRED. Activate planetary defense protocols. Prepare for potential deflection mission.';
+            }
+            
+            // Create factors HTML with accurate calculations
+            const distanceKm = asteroid.close_approach_data?.miss_distance?.kilometers || 1000000;
+            const distanceLD = (distanceKm / 384400).toFixed(3);
+            
+            const sizeMeters = asteroid.estimated_diameter?.meters?.estimated_diameter_max || 50;
+            const velocityKmh = asteroid.close_approach_data?.relative_velocity?.kilometers_per_hour || 20000;
+            const velocityKmps = (velocityKmh / 3600).toFixed(2);
+            
+            // Calculate impact energy (simulated) in megatons
+            const impactEnergy = (sizeMeters * sizeMeters * sizeMeters * (velocityKmps * velocityKmps) * 0.000001).toFixed(2);
+            
+            const factors = [
+                { 
+                    name: 'Distance to Earth', 
+                    value: `${distanceLD} LD (${Math.round(distanceKm / 1000)}k km)`, 
+                    risk: distanceLD < 0.01 ? 'critical' : 
+                          distanceLD < 0.05 ? 'high' : 
+                          distanceLD < 0.1 ? 'medium' : 'low' 
+                },
+                { 
+                    name: 'Object Size', 
+                    value: `${Math.round(sizeMeters)}m diameter`, 
+                    risk: sizeMeters > 1000 ? 'critical' : 
+                          sizeMeters > 140 ? 'high' : 
+                          sizeMeters > 50 ? 'medium' : 'low' 
+                },
+                { 
+                    name: 'Relative Velocity', 
+                    value: `${velocityKmps} km/s (${Math.round(velocityKmh)} km/h)`, 
+                    risk: velocityKmps > 30 ? 'critical' : 
+                          velocityKmps > 20 ? 'high' : 
+                          velocityKmps > 15 ? 'medium' : 'low' 
+                },
+                { 
+                    name: 'Estimated Impact Energy', 
+                    value: `${impactEnergy} MT TNT`, 
+                    risk: impactEnergy > 1000 ? 'critical' : 
+                          impactEnergy > 100 ? 'high' : 
+                          impactEnergy > 10 ? 'medium' : 'low' 
+                },
+                { 
+                    name: 'Hazard Status', 
+                    value: asteroid.is_potentially_hazardous_asteroid ? 'Potentially Hazardous ⚠️' : 'Not Hazardous ✅', 
+                    risk: asteroid.is_potentially_hazardous_asteroid ? 'critical' : 'low' 
+                }
+            ];
+            
+            const factorsHTML = factors.map(factor => `
+                <div class="risk-factor ${factor.risk}">
+                    <div class="flex justify-between">
+                        <span class="font-medium">${factor.name}</span>
+                        <span class="${getRiskColor(factor.risk)}">${factor.value}</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            resultDiv.innerHTML = `
+                <div class="border-t border-gray-800 pt-6 mt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-semibold">Overall Risk Score</h4>
+                        <div class="risk-score ${riskColor}" id="risk-score">${riskScore}</div>
+                    </div>
+                    
+                    <div class="risk-meter">
+                        <div class="risk-fill ${meterClass}" id="risk-meter-fill" style="width: ${riskScore}%"></div>
+                    </div>
+                    
+                    <div class="flex justify-between text-xs text-gray-400 mt-2">
+                        <span>Low</span>
+                        <span>Medium</span>
+                        <span>High</span>
+                        <span>Critical</span>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <div class="flex justify-between items-center mb-3">
+                            <h5 class="text-gray-400 text-sm uppercase tracking-widest">Risk Level</h5>
+                            <span class="${riskColor} font-bold">${riskLevel}</span>
+                        </div>
+                        
+                        <h5 class="text-gray-400 text-sm uppercase tracking-widest mb-3">Risk Factors Analysis</h5>
+                        <div id="risk-factors">${factorsHTML}</div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-gray-900/30 rounded-lg">
+                        <h5 class="font-semibold mb-2">Recommendation & Action Required</h5>
+                        <p class="text-gray-400 text-sm" id="risk-recommendation">${recommendation}</p>
+                        <div class="mt-3 text-xs text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Based on NASA NEO risk assessment guidelines and Torino Impact Hazard Scale
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Helper function for risk colors
+        function getRiskColor(riskLevel) {
+            switch(riskLevel) {
+                case 'critical': return 'text-red-500';
+                case 'high': return 'text-orange-500';
+                case 'medium': return 'text-yellow-500';
+                case 'low': return 'text-green-500';
+                default: return 'text-gray-400';
+            }
+        }
+        
+        // Run deflection simulation
+        async function runDeflectionSimulation() {
+            // Check login for research features
+            if (!isLoggedIn) {
+                showLogin();
+                showToast('Please login to access simulation features.');
+                return;
+            }
+            
+            try {
+                // Try to use backend if available
+                const response = await fetch(`${BACKEND_API}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: "Simulate asteroid deflection for a 200m diameter asteroid approaching Earth" 
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`🚀 Simulation initiated!\n\n${data.response || 'Asteroid deflection simulation running...'}\n\nEstimated deflection probability: 89%\nRequired impact velocity: 6.8 km/s\nTime to impact: 428 days`);
+                } else {
+                    throw new Error('Backend not available');
+                }
+                
+            } catch (error) {
+                console.error('Error running simulation:', error);
+                alert('🚀 Deflection simulation started!\n\n• Calculating optimal impact point\n• Required energy: 5.2 kilotons\n• Launch window: 120-180 days before impact\n• Estimated success probability: 89%\n• Simulation complete: Ready for mission planning.');
+            }
+        }
+        
+        // Setup AI Assistant - UPDATED to use backend server
+        function setupAIAssistant() {
+            const toggleBtn = document.getElementById('ai-assistant-toggle');
+            const assistant = document.getElementById('ai-assistant');
+            const aiInput = document.getElementById('ai-input');
+            const aiSendBtn = document.getElementById('ai-send');
+            const aiMessages = document.getElementById('ai-messages');
+            const aiTyping = document.getElementById('ai-typing');
+            
+            // Toggle AI assistant
+            toggleBtn.addEventListener('click', () => {
+                if (assistant.style.display === 'flex') {
+                    assistant.style.display = 'none';
+                } else {
+                    assistant.style.display = 'flex';
+                    aiInput.focus();
+                }
+            });
+            
+            // Send message
+            async function sendMessage() {
+                const message = aiInput.value.trim();
+                if (!message) return;
+                
+                // Check login for AI features
+                if (!isLoggedIn) {
+                    showLogin();
+                    showToast('Please login to use the AI Assistant.');
+                    return;
+                }
+                
+                // Add user message
+                addMessage(message, 'user');
+                aiInput.value = '';
+                
+                // Show typing indicator
+                aiTyping.style.display = 'flex';
+                
+                try {
+                    // Get AI response from backend
+                    const response = await getAIResponse(message);
+                    addMessage(response, 'assistant');
+                } catch (error) {
+                    console.error('AI Error:', error);
+                    // Fallback to local responses
+                    const fallbackResponse = getFallbackResponse(message);
+                    addMessage(fallbackResponse, 'assistant');
+                } finally {
+                    // Hide typing indicator
+                    aiTyping.style.display = 'none';
+                }
+            }
+            
+            // Send on button click
+            aiSendBtn.addEventListener('click', sendMessage);
+            
+            // Send on Enter key
+            aiInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // Add message to chat
+            function addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `ai-message ai-${sender}`;
+                messageDiv.textContent = text;
+                aiMessages.appendChild(messageDiv);
+                aiMessages.scrollTop = aiMessages.scrollHeight;
+            }
+            
+            // Get response from backend server
+            async function getAIResponse(prompt) {
+                try {
+                    console.log('📡 Calling AI backend...');
+                    
+                    const response = await fetch(`${BACKEND_API}/chat`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ message: prompt })
+                    });
+
+                    console.log('Response status:', response.status, response.statusText);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('AI response:', data);
+                    
+                    return data.response || 'I received your message but got an empty response.';
+                    
+                } catch (error) {
+                    console.error('❌ AI Backend Error:', error);
+                    throw error; // Re-throw for fallback
+                }
+            }
+            
+            // Fallback responses if backend fails
+            function getFallbackResponse(prompt) {
+                const lowerPrompt = prompt.toLowerCase();
+                
+                if (lowerPrompt.includes('asteroid') || lowerPrompt.includes('neo') || lowerPrompt.includes('track')) {
+                    return "I can see you're interested in asteroids! Our observatory tracks near-Earth objects. For live data, check the Tracking page where you can see asteroid details including size, speed, and distance from Earth.";
+                } else if (lowerPrompt.includes('risk') || lowerPrompt.includes('danger') || lowerPrompt.includes('threat')) {
+                    return "Asteroid risk assessment is one of our specialties! We analyze multiple factors like distance, size, velocity, and orbit. Try our Risk Analyzer tool in the Research section to assess specific asteroids.";
+                } else if (lowerPrompt.includes('nasa') || lowerPrompt.includes('data')) {
+                    return "We integrate with NASA's NEO data for accurate tracking. The platform provides real-time information about near-Earth objects. Make sure the backend server is running for full AI features.";
+                } else if (lowerPrompt.includes('research') || lowerPrompt.includes('study')) {
+                    return "Our research focuses on planetary defense, asteroid deflection, and space observation. Check the Research section for tools like the Risk Analyzer and deflection simulations.";
+                } else if (lowerPrompt.includes('help') || lowerPrompt.includes('what can you do')) {
+                    return "I can help you with asteroid tracking, risk analysis, space research, and observatory features. Try asking about specific asteroids or explore our Tracking and Research pages!";
+                } else if (lowerPrompt.includes('hello') || lowerPrompt.includes('hi') || lowerPrompt.includes('hey')) {
+                    return "Hello! I'm Cosmic AI, your assistant for Stellar Observatory. I specialize in asteroid tracking and space research. How can I help you explore the cosmos today?";
+                } else if (lowerPrompt.includes('server') || lowerPrompt.includes('backend')) {
+                    return "To use full AI features, make sure the backend server is running. Open terminal and run: node ai-server.js";
+                } else if (lowerPrompt.includes('login') || lowerPrompt.includes('access')) {
+                    return "You need to login to access all features. Use the login button in the navigation bar. Demo credentials: admin / observatory123";
+                } else {
+                    return "Welcome to Stellar Observatory! I'm your Cosmic AI Assistant. I can help with asteroid tracking, space research, and observatory features. What would you like to know about?";
+                }
+            }
+        }
+        
+        // Setup contact form
+        function setupContactForm() {
+            const contactForm = document.getElementById('contact-form');
+            
+            contactForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                
+                const formData = {
+                    name: document.getElementById('name').value,
+                    email: document.getElementById('email').value,
+                    message: document.getElementById('message').value
+                };
+                
+                try {
+                    // Try to send to backend
+                    const response = await fetch(`${BACKEND_API}/chat`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            message: `New contact form submission from ${formData.name} (${formData.email}): ${formData.message}` 
+                        })
+                    });
+                    
+                    alert('Thank you for your message! We will get back to you soon.');
+                    contactForm.reset();
+                    
+                } catch (error) {
+                    console.error('Contact form error:', error);
+                    alert('Thank you for your message! (Note: Backend server needed for message delivery)');
+                    contactForm.reset();
+                }
+            });
+        }
+        
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('bg-black/95', 'py-4');
+                navbar.classList.remove('py-6');
+            } else {
+                navbar.classList.remove('bg-black/95', 'py-4');
+                navbar.classList.add('py-6');
+            }
+        });
+        
+        // Export functions for global use
+        window.navigateTo = navigateTo;
+        window.toggleMenu = toggleMenu;
+        window.filterTracking = filterTracking;
+        window.fetchRealAsteroids = fetchRealAsteroids;
+        window.analyzeSelectedAsteroid = analyzeSelectedAsteroid;
+        window.runDeflectionSimulation = runDeflectionSimulation;
+        window.refreshDashboard = refreshDashboard;
+        window.refreshHeatmap = refreshHeatmap;
+        window.showLogin = showLogin;
+        window.logout = logout;
+    </script>
+</body>
+</html>
